@@ -7,9 +7,12 @@ function Home() {
       <h1 className="home-title">
         Contrato de Manutenção Portas Automáticas 2025 / 2026
       </h1>
-      <p className="home-subtitle">Selecione uma das opções abaixo para continuar</p>
+      <p className="home-subtitle">
+        Selecione uma das opções abaixo para continuar
+      </p>
 
       <div className="cards">
+        {/* Card Técnico */}
         <div className="card">
           <span className="icon">🛠️</span>
           <h2>Formulário Técnico</h2>
@@ -17,6 +20,7 @@ function Home() {
           <Link to="/tecnico" className="btn btn-blue">Acessar</Link>
         </div>
 
+        {/* Card Cliente */}
         <div className="card">
           <span className="icon">👤</span>
           <h2>Formulário Cliente</h2>
@@ -24,11 +28,20 @@ function Home() {
           <Link to="/cliente" className="btn btn-green">Acessar</Link>
         </div>
 
+        {/* Card Dashboard */}
         <div className="card">
           <span className="icon">📊</span>
           <h2>Dashboard de Monitoramento</h2>
           <p>Acompanhe relatórios e status das portas</p>
           <Link to="/dashboard" className="btn btn-purple">Acessar</Link>
+        </div>
+
+        {/* Novo Card Fechamento de OS */}
+        <div className="card">
+          <span className="icon">✅</span>
+          <h2>Fechamento de OS</h2>
+          <p>Encerrar ordens de serviço abertas</p>
+          <Link to="/fechamento" className="btn btn-green">Acessar</Link>
         </div>
       </div>
 
