@@ -2,8 +2,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: #111;
+  /* min-height: 100vh; */
+  /* background: #111; */
+  margin-top: 32px
 }
 
 .fechamento-card {
@@ -21,6 +22,7 @@
   font-weight: bold;
   color: #0a2a66;
   margin-bottom: 0.5rem;
+  margin-left: 2rem;
 }
 
 .fechamento-subtitle {
@@ -67,4 +69,9 @@
 .fechamento-form button:disabled {
   background: #999;
   cursor: not-allowed;
+}
+.fechamentosOS{
+  display: flex;
+  align-items: center;
+  
 }

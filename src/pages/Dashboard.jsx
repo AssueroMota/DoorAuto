@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import Papa from "papaparse";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  PieChart, Pie, Cell, LineChart, Line
+  PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer
 } from "recharts";
+
 import "./Dashboard.css";
+import logo from "../assets/logo.png";
 
 const Dashboard = () => {
   const [data, setData] = useState([]);
@@ -17,28 +20,32 @@ const Dashboard = () => {
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
 
-  // 🔹 Carregar dados da planilha
+  // 🔹 Carregar dados da planilha usando PapaParse
   useEffect(() => {
     fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vR5LGgZ5j-zZvZpXaXMfwX1781b-KukF0SlJlGN2SSGQHPyJeuxGWNuUzwgwsHQ3cuVEiv2XrltD-tR/pub?gid=0&single=true&output=csv")
       .then((res) => res.text())
-      .then((csv) => {
-        const rows = csv.split("\n").map((r) => r.split(","));
-        const values = rows.slice(1).filter((r) => r.length > 1);
+      .then((csvText) => {
+        const parsed = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          delimiter: ","
+        });
 
-        const mapped = values.map((r) => ({
-          OS_ID: r[0],
-          Porta: r[1],
-          Status: r[2],
-          Servico: r[3],
-          Tecnico: r[4],
-          Data: r[5],
-          Ciclos: Number(r[6] || 0),
-          Custo: Number(r[7]?.replace(",", ".") || 0),
-          Relato: r[8],
-          StatusOS: r[9],
-          NomeCliente: r[10],
-          Telefone: r[11],
-          Email: r[12],
+        // 🔹 Mapear dados corrigindo tipos
+        const mapped = parsed.data.map((r) => ({
+          OS_ID: r.OS_ID,
+          Porta: r.Porta,
+          Status: r.Status,
+          Servico: r.Serviço,
+          Tecnico: r.Técnico,
+          Data: r.Data,
+          Ciclos: Number(r.Ciclos || 0),
+          Custo: Number(r.Custo?.replace(".", "").replace(",", ".") || 0),
+          Relato: r.Relato,
+          StatusOS: r.StatusOS?.trim(),
+          NomeCliente: r["Nome do Cliente"],
+          Telefone: r.Telefone,
+          Email: r.Email
         }));
 
         setData(mapped);
@@ -113,22 +120,64 @@ const Dashboard = () => {
 
   const COLORS = ["#22c55e", "#facc15", "#ef4444", "#1e3a8a", "#9333ea"];
 
+
+  // 🔹 Agrupar serviços por dia e tipo
+  const servicosData = Object.values(
+    filtered.reduce((acc, row) => {
+      const dia = row.Data?.split(" ")[0]; // pega só a data (sem hora)
+
+      if (!acc[dia]) acc[dia] = { Data: dia, Corretiva: 0, Preventiva: 0 };
+
+      if (row.Servico?.toLowerCase().includes("corretiva")) {
+        acc[dia].Corretiva += 1;
+      }
+      if (row.Servico?.toLowerCase().includes("preventiva")) {
+        acc[dia].Preventiva += 1;
+      }
+
+      return acc;
+    }, {})
+  );
+
+
+
+
+  // 🔹 Contar motivos de manutenção corretiva
+  const motivosData = Object.values(
+    filtered.reduce((acc, row) => {
+      if (row.Servico?.toLowerCase().includes("corretiva") && row.Relato) {
+        const motivo = row.Relato.trim();
+        if (!acc[motivo]) acc[motivo] = { Motivo: motivo, Total: 0 };
+        acc[motivo].Total += 1;
+      }
+      return acc;
+    }, {})
+  );
+
+  // 🔹 Agrupar serviços por técnico responsável
+  const responsavelData = Object.values(
+    filtered.reduce((acc, row) => {
+      if (!row.Tecnico) return acc;
+
+      if (!acc[row.Tecnico]) {
+        acc[row.Tecnico] = { name: row.Tecnico, value: 0 };
+      }
+      acc[row.Tecnico].value += 1;
+
+      return acc;
+    }, {})
+  );
+
+
+
   return (
     <div className="dashboard-wrapper">
-
-      {/* 🔹 Header com logo inline e botão de voltar */}
+      {/* 🔹 Header com logo e voltar */}
       <div className="dashboard-header">
-        <div className="logo-container">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 100 100" fill="#123D6D">
-            <path d="M50 0 L55 20 L75 25 L55 30 L50 50 L45 30 L25 25 L45 20 Z" />
-            <path d="M50 50 L70 55 L75 75 L55 70 L50 90 L45 70 L25 75 L30 55 Z" />
-          </svg>
-          <div className="logo-texts">
-            <h1 className="company-name">PLANTIER</h1>
-            <p className="company-subtitle">Manutenção e Instalações Industriais LTDA</p>
-          </div>
-        </div>
         <div className="back-arrow" onClick={() => window.history.back()} />
+        <div className="logo-container">
+          <img src={logo} width={320} alt="Logo" />
+        </div>
       </div>
 
       {/* 🔹 Filtros */}
@@ -183,96 +232,164 @@ const Dashboard = () => {
         <div className="kpi-card purple"><h3>Custo Total</h3><p>R$ {custoTotal.toLocaleString()}</p></div>
       </div>
 
-      {/* 🔹 Gráficos */}
-      <div className="charts-grid">
+      <div className="my_Grafics">
+
+        {/* 🔹 Gráficos */}
         <div className="chart-container wide">
-          <h3>Status das OS</h3>
-          <BarChart width={600} height={250} data={statusData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" /><YAxis /><Tooltip /><Legend />
-            <Bar dataKey="value">
-              {statusData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-            </Bar>
-          </BarChart>
+          <h3>Custos de Manutenção por Porta</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={custoData}
+              layout="vertical"
+              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="Porta" width={70} />
+              <Tooltip />
+              <Bar dataKey="Custo" fill="#9333ea" barSize={18} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* 🔹 Gráficos 2 */}
+        <div className="chart-container wide">
+          <h3>Status Geral das Portas</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart
+              data={[
+                { name: "Ótimo", value: otimo, color: "#22c55e" },
+                { name: "Manutenção", value: manutencao, color: "#facc15" },
+                { name: "Parada", value: paradas, color: "#ef4444" },
+              ]}
+              layout="vertical"
+              margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="name" />
+              <Tooltip />
+              <Bar dataKey="value" barSize={30} label={{ position: "right", fill: "#fff" }}>
+                <Cell fill="#22c55e" /> {/* Ótimo */}
+                <Cell fill="#facc15" /> {/* Manutenção */}
+                <Cell fill="#ef4444" /> {/* Parada */}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className="chart-container">
-          <h3>Custos por Porta</h3>
-          <BarChart width={350} height={250} data={custoData}>
-            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="Porta" /><YAxis /><Tooltip />
-            <Bar dataKey="Custo" fill="#1e3a8a" />
-          </BarChart>
-        </div>
-
-        <div className="chart-container">
-          <h3>Ciclos por Porta</h3>
-          <BarChart width={350} height={250} data={ciclosData}>
-            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="Porta" /><YAxis /><Tooltip />
-            <Bar dataKey="Ciclos" fill="#9333ea" />
-          </BarChart>
-        </div>
-
-        <div className="chart-container">
-          <h3>Distribuição de Custos</h3>
-          <PieChart width={350} height={250}>
-            <Pie data={custoData} dataKey="Custo" nameKey="Porta" cx="50%" cy="50%" outerRadius={90} label>
-              {custoData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-            </Pie>
-            <Tooltip /><Legend />
-          </PieChart>
-        </div>
+        {/* grafico 3 */}
 
         <div className="chart-container wide">
-          <h3>OS Abertas x Fechadas</h3>
-          <LineChart width={600} height={250} data={timelineData}>
-            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="Data" /><YAxis /><Tooltip /><Legend />
-            <Line type="monotone" dataKey="Abertas" stroke="#ef4444" />
-            <Line type="monotone" dataKey="Fechadas" stroke="#22c55e" />
-          </LineChart>
+          <h3>Serviços por dia</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={servicosData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="Data" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Corretiva" stackId="a" fill="#22c55e" />
+              <Bar dataKey="Preventiva" stackId="a" fill="#6b7280" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className="chart-container">
-          <h3>OS por Técnico</h3>
-          <BarChart width={350} height={250} data={tecnicoData}>
-            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="Tecnico" /><YAxis /><Tooltip /><Legend />
-            <Bar dataKey="OS" fill="#2563eb" />
-          </BarChart>
+        {/* grafico 4 */}
+
+        <div className="chart-container wide">
+          <h3>Motivo para Corretiva</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={motivosData}
+              layout="vertical"
+              margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="Motivo" />
+              <Tooltip />
+              <Bar dataKey="Total" barSize={25} fill="#9333ea" label={{ position: "right", fill: "#fff" }} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
+        {/* grafico 5 */}
+
         <div className="chart-container">
-          <h3>Clientes mais Ativos</h3>
-          <BarChart width={350} height={250} data={clienteData}>
-            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="Cliente" /><YAxis /><Tooltip />
-            <Bar dataKey="OS" fill="#f97316" />
-          </BarChart>
+          <h3>Responsável pelas Manutenções</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={responsavelData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+              >
+                {responsavelData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={["#22c55e", "#facc15", "#ef4444", "#3b82f6", "#9333ea"][index % 5]} // cores diferentes
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
+
+
+
+
       </div>
-
-      {/* 🔹 Tabela de OS no final */}
+      {/* 🔹 Tabela de OS */}
       <div className="table-section">
         <h2>Ordens de Serviço</h2>
-        <table className="dashboard-table">
-          <thead>
-            <tr>
-              <th>OS</th>
-              <th>Descrição</th>
-              <th>Aberta por</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((row, i) => (
-              <tr key={i}>
-                <td>{row.OS_ID}</td>
-                <td>{row.StatusOS}</td>
-                <td>{row.Tecnico || row.NomeCliente || "—"}</td>
-                <td>{row.Data}</td>
+        <div className="table-scroll">
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>OS</th>
+                <th>Serviço</th>
+                <th>Status</th>
+                <th>Aberta/Fechada</th>
+                <th>Técnico / Cliente</th>
+                <th>Data</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((row, i) => (
+                <tr key={i}>
+                  <td>{row.OS_ID}</td>
+                  <td>{row.Servico}</td>
+                  <td>{row.Status}</td>
+                  <td>
+                    {row.StatusOS?.toLowerCase().includes("aberta") ? (
+                      <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 6px", borderRadius: "6px" }}>
+                        Aberta
+                      </span>
+                    ) : row.StatusOS?.toLowerCase().includes("fechada") ? (
+                      <span style={{ background: "#dcfce7", color: "#16a34a", padding: "2px 6px", borderRadius: "6px" }}>
+                        Fechada
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td>{row.Tecnico || row.NomeCliente || "—"}</td>
+                  <td>{row.Data}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-
     </div>
   );
 };

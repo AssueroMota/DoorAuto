@@ -44,7 +44,10 @@ function FechamentoOS() {
   return (
     <div className="fechamento-container">
       <div className="fechamento-card">
-        <h1 className="fechamento-title">📌 Fechamento de OS</h1>
+        <div className="fechamentosOS">
+          <div className="back-arrow" onClick={() => window.history.back()} />
+          <h1 className="fechamento-title">Fechamento de OS</h1>
+        </div>
         <p className="fechamento-subtitle">
           Informe o número da OS e finalize o chamado.
         </p>
