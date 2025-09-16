@@ -4,13 +4,10 @@ import { useState } from "react";
 
 function Tecnico() {
   const [formData, setFormData] = useState({
-    porta: "",
-    status: "",
-    servico: "",
     tecnico: "",
-    ciclos: "",
-    custo: "",
-    relato: ""
+    setor: "",
+    descricao: "",
+    porta: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -21,15 +18,7 @@ function Tecnico() {
   };
 
   const validateForm = () => {
-    if (
-      !formData.porta ||
-      !formData.status ||
-      !formData.servico ||
-      !formData.tecnico ||
-      !formData.ciclos ||
-      !formData.custo ||
-      !formData.relato
-    ) {
+    if (!formData.tecnico || !formData.setor || !formData.descricao || !formData.porta) {
       alert("⚠️ Preencha todos os campos antes de enviar!");
       return false;
     }
@@ -42,7 +31,7 @@ function Tecnico() {
 
     setLoading(true);
 
-    // 🔹 gera automaticamente data + hora
+    // 🔹 Data + hora automática
     const now = new Date();
     const dataAtual = now.toLocaleDateString("pt-BR");
     const horaAtual = now.toLocaleTimeString("pt-BR");
@@ -51,9 +40,8 @@ function Tecnico() {
       action: "create",
       ...formData,
       data: `${dataAtual} ${horaAtual}`,
-      statusOS: "Aberta"   // 🔹 sempre que criar, vem como Aberta
+      statusOS: "Aberta", // toda OS criada começa como Aberta
     };
-
 
     try {
       const res = await fetch(
@@ -69,13 +57,10 @@ function Tecnico() {
       if (data.success) {
         alert(`✅ Dados enviados! Seu ID é: ${data.osId}`);
         setFormData({
-          porta: "",
-          status: "",
-          servico: "",
           tecnico: "",
-          ciclos: "",
-          custo: "",
-          relato: ""
+          setor: "",
+          descricao: "",
+          porta: "",
         });
       } else {
         alert("⚠️ Houve um problema ao salvar.");
@@ -91,119 +76,59 @@ function Tecnico() {
     <div className="form-wrapper">
       <div className="form-card">
         <div className="form-header">
-          <Link to="/" className="back-arrow" aria-label="Voltar"></Link>
-          <h1 className="form-title">Formulário para Técnico</h1>
+          <Link to="/tecnico-home" className="back-arrow" aria-label="Voltar"></Link>
+          <h1 className="form-title">Formulário do Técnico</h1>
         </div>
         <p className="form-subtitle">Preencha os dados do atendimento técnico</p>
 
         <form className="form" onSubmit={handleSubmit}>
           <label>
-            Porta (PR)
-            <input
-              type="text"
-              name="porta"
-              value={formData.porta}
-              onChange={handleChange}
-              required
-            />
-          </label>
-
-          <fieldset>
-            <legend>Status da Porta</legend>
-            <label>
-              <input
-                type="radio"
-                name="status"
-                value="Ótimo"
-                checked={formData.status === "Ótimo"}
-                onChange={handleChange}
-              />
-              Ótimo
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="status"
-                value="Manutenção"
-                checked={formData.status === "Manutenção"}
-                onChange={handleChange}
-              />
-              Manutenção
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="status"
-                value="Parada"
-                checked={formData.status === "Parada"}
-                onChange={handleChange}
-              />
-              Parada
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Serviço</legend>
-            <label>
-              <input
-                type="radio"
-                name="servico"
-                value="Preventiva"
-                checked={formData.servico === "Preventiva"}
-                onChange={handleChange}
-              />
-              Preventiva
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="servico"
-                value="Corretiva"
-                checked={formData.servico === "Corretiva"}
-                onChange={handleChange}
-              />
-              Corretiva
-            </label>
-          </fieldset>
-
-          <label>
-            Técnico Responsável
-            <input
-              type="text"
+            Nome do Técnico
+            <select
               name="tecnico"
               value={formData.tecnico}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">Selecione...</option>
+              <option value="Victor Oliveira">Victor Oliveira</option>
+            </select>
           </label>
 
+
           <label>
-            Número de Ciclos
+            Setor
             <input
-              type="number"
-              name="ciclos"
-              value={formData.ciclos}
+              type="text"
+              name="setor"
+              value={formData.setor}
               onChange={handleChange}
               required
             />
           </label>
 
           <label>
-            Custo (R$)
-            <input
-              type="number"
-              name="custo"
-              value={formData.custo}
+            Porta (ID)
+            <select
+              name="porta"
+              value={formData.porta}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">Selecione...</option>
+              {Array.from({ length: 91 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
-            Relato do Serviço
+            Descrição
             <textarea
-              name="relato"
-              value={formData.relato}
+              name="descricao"
+              value={formData.descricao}
               onChange={handleChange}
               required
             ></textarea>
@@ -219,13 +144,10 @@ function Tecnico() {
               disabled={loading}
               onClick={() =>
                 setFormData({
-                  porta: "",
-                  status: "",
-                  servico: "",
                   tecnico: "",
-                  ciclos: "",
-                  custo: "",
-                  relato: ""
+                  setor: "",
+                  descricao: "",
+                  porta: "",
                 })
               }
             >

@@ -4,12 +4,11 @@ import { useState } from "react";
 
 function Cliente() {
   const [formData, setFormData] = useState({
-    nome: "",
-    telefone: "",
-    email: "",
+    solicitante: "",
+    setor: "",
     porta: "",
-    problema: "",
-    statusOS: "Aberta" // 🔹 sempre começa como "Aberta"
+    descricao: "",
+    statusOS: "Aberta", // 🔹 sempre começa como "Aberta"
   });
 
   const [loading, setLoading] = useState(false);
@@ -20,13 +19,7 @@ function Cliente() {
   };
 
   const validateForm = () => {
-    if (
-      !formData.nome ||
-      !formData.telefone ||
-      !formData.email ||
-      !formData.porta ||
-      !formData.problema
-    ) {
+    if (!formData.solicitante || !formData.setor || !formData.porta || !formData.descricao) {
       alert("⚠️ Preencha todos os campos antes de enviar!");
       return false;
     }
@@ -46,7 +39,7 @@ function Cliente() {
     const payload = {
       action: "create",
       ...formData,
-      data: `${dataAtual} ${horaAtual}`
+      data: `${dataAtual} ${horaAtual}`,
     };
 
     try {
@@ -63,12 +56,11 @@ function Cliente() {
       if (data.success) {
         alert(`✅ Solicitação enviada! Seu ID é: ${data.osId}`);
         setFormData({
-          nome: "",
-          telefone: "",
-          email: "",
+          solicitante: "",
+          setor: "",
           porta: "",
-          problema: "",
-          statusOS: "Aberta" // 🔹 reset continua como Aberta
+          descricao: "",
+          statusOS: "Aberta",
         });
       } else {
         alert("⚠️ Houve um problema ao salvar.");
@@ -91,69 +83,59 @@ function Cliente() {
 
         <form className="form" onSubmit={handleSubmit}>
           <label>
-            Nome do Cliente
+            Nome do Solicitante
             <input
               type="text"
-              name="nome"
-              value={formData.nome}
+              name="solicitante"
+              value={formData.solicitante}
               onChange={handleChange}
               required
             />
           </label>
 
           <label>
-            Telefone
+            Setor
             <input
               type="text"
-              name="telefone"
-              value={formData.telefone}
+              name="setor"
+              value={formData.setor}
               onChange={handleChange}
               required
             />
           </label>
+          <div style={{display:"flex",flexDirection:'Column',gap:'32px'}}>
 
-          <label>
-            Email
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </label>
+            <label>
+              Porta (ID)
+              <select
+                name="porta"
+                value={formData.porta}
+                onChange={handleChange}
+                required
+              >
 
-          <label>
-            Porta (PR)
-            <input
-              type="text"
-              name="porta"
-              value={formData.porta}
-              onChange={handleChange}
-              required
-            />
-          </label>
+                <option value="">Selecione...</option>
+                {Array.from({ length: 91 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            </label>
 
+          </div>
           <label>
-            Descrição do Problema
+            Descrição
             <textarea
-              name="problema"
-              value={formData.problema}
+              name="descricao"
+              value={formData.descricao}
               onChange={handleChange}
               required
             ></textarea>
           </label>
 
           {/* 🔹 Campo Status OS fixo como "Aberta" */}
-          <label style={{display:'none'}}>
-            Status OS
-            <input
-              type="text"
-              name="statusOS"
-              value={formData.statusOS}
-              readOnly
-            />
-          </label>
+          <input type="hidden" name="statusOS" value={formData.statusOS} readOnly />
 
           <div className="form-buttons">
             <button type="submit" className="btn-primary" disabled={loading}>
@@ -165,12 +147,11 @@ function Cliente() {
               disabled={loading}
               onClick={() =>
                 setFormData({
-                  nome: "",
-                  telefone: "",
-                  email: "",
+                  solicitante: "",
+                  setor: "",
                   porta: "",
-                  problema: "",
-                  statusOS: "Aberta"
+                  descricao: "",
+                  statusOS: "Aberta",
                 })
               }
             >

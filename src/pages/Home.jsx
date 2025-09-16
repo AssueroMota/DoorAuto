@@ -1,53 +1,90 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 function Home() {
+  const [showModal, setShowModal] = useState(true); // modal inicial
+  const [showSenha, setShowSenha] = useState(false); // modal senha técnico
+  const [senha, setSenha] = useState("");
+  const navigate = useNavigate();
+
+  const handleCliente = () => {
+    setShowModal(false);
+    navigate("/cliente");
+  };
+
+  const handleTecnico = () => {
+    // se já autenticado não pede de novo
+    if (localStorage.getItem("tecnicoAuth") === "true") {
+      navigate("/tecnico-home");
+    } else {
+      setShowSenha(true);
+    }
+  };
+
+  const handleLogin = () => {
+    if (senha === "0819") {
+      localStorage.setItem("tecnicoAuth", "true");
+      setShowSenha(false);
+      navigate("/tecnico-home");
+    } else {
+      alert("Senha incorreta!");
+    }
+  };
+
   return (
     <div className="home-container">
       <h1 className="home-title">
-        Contrato de Manutenção Portas Automáticas 2025 / 2026
+        Sistema de Gestão de Manutenção Portas Automáticas
       </h1>
-      <p className="home-subtitle">
-        Selecione uma das opções abaixo para continuar
-      </p>
 
-      <div className="cards">
-        {/* Card Técnico */}
-        <div className="card">
-          <span className="icon">🛠️</span>
-          <h2>Formulário Técnico</h2>
-          <p>Registro de manutenções preventivas e corretivas</p>
-          <Link to="/tecnico" className="btn btn-blue">Acessar</Link>
+      {/* Modal inicial com Cliente e Técnico */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Selecione sua área</h2>
+            <div className="modal-options">
+              <div className="card" onClick={handleCliente}>
+                <span className="icon">👤</span>
+                <h3>Cliente</h3>
+                <p>Registrar uma solicitação de serviço</p>
+              </div>
+              <div className="card" onClick={handleTecnico}>
+                <span className="icon">🛠️</span>
+                <h3>Técnico</h3>
+                <p>Acessar formulários e acompanhamento</p>
+              </div>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Card Cliente */}
-        <div className="card">
-          <span className="icon">👤</span>
-          <h2>Formulário Cliente</h2>
-          <p>Feedback e avaliação do serviço realizado</p>
-          <Link to="/cliente" className="btn btn-green">Acessar</Link>
+      {/* Modal senha técnico */}
+      {showSenha && (
+        <div className="modal-overlay">
+          <div className="modal-content small">
+            <h2>Área do Técnico 🔒</h2>
+            <p>Digite a senha para continuar</p>
+            <input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Digite a senha"
+            />
+            <div className="modal-actions">
+              <button className="btn btn-blue" onClick={handleLogin}>
+                Entrar
+              </button>
+              <button
+                className="btn btn-gray"
+                onClick={() => setShowSenha(false)}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Card Dashboard */}
-        <div className="card">
-          <span className="icon">📊</span>
-          <h2>Dashboard de Monitoramento</h2>
-          <p>Acompanhe relatórios e status das portas</p>
-          <Link to="/dashboard" className="btn btn-purple">Acessar</Link>
-        </div>
-
-        {/* Novo Card Fechamento de OS */}
-        <div className="card">
-          <span className="icon">✅</span>
-          <h2>Fechamento de OS</h2>
-          <p>Encerrar ordens de serviço abertas</p>
-          <Link to="/fechamento" className="btn btn-green">Acessar</Link>
-        </div>
-      </div>
-
-      <footer className="footer">
-        © 2025–2026 – Sistema de Manutenção de Portas Automáticas
-      </footer>
+      )}
     </div>
   );
 }
