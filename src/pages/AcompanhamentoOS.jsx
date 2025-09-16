@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Papa from "papaparse";
 import "./AcompanhamentoOS.css";
 
@@ -20,7 +20,7 @@ export default function AcompanhamentoOS() {
     status: "Aberto",
     descricaoTecnica: "",
     tecnicoResponsavel: "",
-    servico: "", // 👈 novo campo
+    servico: "",
   });
 
   // carregar planilha
@@ -61,6 +61,7 @@ export default function AcompanhamentoOS() {
     if (os) {
       setForm((p) => ({
         ...p,
+        osId: os.id,
         status: os.statusOS || "Aberto",
         servico: os.servico || "",
         descricaoTecnica: os.descricaoFinal || "",
@@ -92,7 +93,7 @@ export default function AcompanhamentoOS() {
         action: "update",
         OS_ID: form.osId,
         StatusOS: form.status,
-        Servico: form.servico, // 👈 envia para o script
+        Servico: form.servico,
         DescricaoTecnica: form.descricaoTecnica,
         TecnicoResponsavel: form.tecnicoResponsavel,
       };
@@ -105,6 +106,7 @@ export default function AcompanhamentoOS() {
 
       if (data.success) {
         alert("✅ O.S atualizada com sucesso!");
+
         // recarregar planilha para refletir mudanças
         const txt = await fetch(SHEET_CSV).then((r) => r.text());
         const parsed = Papa.parse(txt, { header: true, skipEmptyLines: true });
@@ -125,7 +127,15 @@ export default function AcompanhamentoOS() {
         }));
         setRows(dataReload);
 
-        window.location.reload(); // 🔥 reseta a página inteira
+        // 🔹 Limpar os campos do formulário
+        setForm({
+          osId: "",
+          status: "Aberto",
+          servico: "",
+          descricaoTecnica: "",
+          tecnicoResponsavel: "",
+        });
+        setSelected(null);
       } else {
         alert("⚠️ Falha ao atualizar: " + (data.message || "erro"));
       }
@@ -138,10 +148,9 @@ export default function AcompanhamentoOS() {
 
   return (
     <div className="os-wrapper">
-      <div className="form-header" style={{alignItems:'flex-start'}}>
+      <div className="form-header" style={{ alignItems: "flex-start" }}>
         <Link to="/tecnico-home" className="back-arrow" aria-label="Voltar"></Link>
         <h1>Acompanhamento de Ordens de Serviço</h1>
-
       </div>
 
       <form className="os-form" onSubmit={handleSubmit}>
@@ -240,7 +249,6 @@ export default function AcompanhamentoOS() {
           >
             <option value="">Selecione...</option>
             <option value="Victor Oliveira">Victor Oliveira</option>
-            {/* adicione outros técnicos aqui */}
           </select>
         </label>
 
