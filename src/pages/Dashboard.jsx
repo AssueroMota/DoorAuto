@@ -160,21 +160,26 @@ const Dashboard = () => {
           ))}
         </select>
 
-        <input
-          type="date"
-          lang="pt-BR"
-          value={filterStartDate}
-          onChange={(e) => setFilterStartDate(e.target.value)}
-          placeholder="Data Inicial"
-        />
+        <div className="date-filter">
+          <label htmlFor="startDate">Data Inicial</label>
+          <input
+            id="startDate"
+            type="date"
+            lang="pt-BR"
+            value={filterStartDate}
+            onChange={(e) => setFilterStartDate(e.target.value)}
+          />
 
-        <input
-          type="date"
-          lang="pt-BR"
-          value={filterEndDate}
-          onChange={(e) => setFilterEndDate(e.target.value)}
-          placeholder="Data Final"
-        />
+          <label htmlFor="endDate">Data Final</label>
+          <input
+            id="endDate"
+            type="date"
+            lang="pt-BR"
+            value={filterEndDate}
+            onChange={(e) => setFilterEndDate(e.target.value)}
+          />
+        </div>
+
 
         <button onClick={resetFilters} className="btn-reset">
           Resetar
