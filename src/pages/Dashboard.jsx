@@ -55,7 +55,6 @@ const Dashboard = () => {
             Porta: r["Porta (ID)"],
             Servico: r["Serviço"],
             TecnicoAbertura: r["Técnico (Abertura)"],
-            // ✅ Guardar os dois formatos
             DataAbertura: dataAbertura
               ? dataAbertura.toLocaleString("pt-BR")
               : "",
@@ -75,7 +74,6 @@ const Dashboard = () => {
           };
         });
 
-        // 🔹 Ordena por número da O.S (mais recente primeiro)
         const sorted = mapped.sort((a, b) => {
           const numA = parseInt(String(a.OS_ID).replace("OS-", ""), 10) || 0;
           const numB = parseInt(String(b.OS_ID).replace("OS-", ""), 10) || 0;
@@ -117,7 +115,6 @@ const Dashboard = () => {
     setFiltered(data);
   };
 
-  // 🔹 Opções únicas de portas para o select
   const portasDisponiveis = [...new Set(data.map((d) => d.Porta).filter(Boolean))];
 
   return (
@@ -168,6 +165,7 @@ const Dashboard = () => {
           lang="pt-BR"
           value={filterStartDate}
           onChange={(e) => setFilterStartDate(e.target.value)}
+          placeholder="Data Inicial"
         />
 
         <input
@@ -175,6 +173,7 @@ const Dashboard = () => {
           lang="pt-BR"
           value={filterEndDate}
           onChange={(e) => setFilterEndDate(e.target.value)}
+          placeholder="Data Final"
         />
 
         <button onClick={resetFilters} className="btn-reset">
@@ -192,6 +191,7 @@ const Dashboard = () => {
                 <th>OS</th>
                 <th>Status</th>
                 <th>Tempo em Aberto</th>
+                <th>Portas (ID)</th>
                 <th>Tipo de Manutenção</th>
                 <th>Solicitante</th>
                 <th>Data de Abertura</th>
@@ -233,6 +233,7 @@ const Dashboard = () => {
                     )}
                   </td>
                   <td>{row.TempoAberto || "—"}</td>
+                  <td>{row.Porta || "—"}</td>
                   <td>{row.Servico || "—"}</td>
                   <td>{row.Solicitante || "—"}</td>
                   <td>{row.DataAbertura || "—"}</td>
