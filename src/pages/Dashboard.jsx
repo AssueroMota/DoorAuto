@@ -14,8 +14,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import DatePicker, { registerLocale } from "react-datepicker";
+import ptBR from "date-fns/locale/pt-BR";
+import "react-datepicker/dist/react-datepicker.css";
+
 import "./Dashboard.css";
 import logo from "../assets/logo.png";
+
+registerLocale("pt-BR", ptBR);
 
 const Dashboard = () => {
   const [data, setData] = useState([]);
@@ -26,8 +32,8 @@ const Dashboard = () => {
   const [filterPorta, setFilterPorta] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterServico, setFilterServico] = useState("");
-  const [filterStartDate, setFilterStartDate] = useState("");
-  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filterStartDate, setFilterStartDate] = useState(null);
+  const [filterEndDate, setFilterEndDate] = useState(null);
 
   // Carregar dados
   useEffect(() => {
@@ -43,12 +49,37 @@ const Dashboard = () => {
         });
 
         const mapped = parsed.data.map((r) => {
-          const dataAbertura = r["Data Abertura"]
-            ? new Date(r["Data Abertura"])
-            : null;
-          const dataFechamento = r["Data/Hora Fechamento"]
-            ? new Date(r["Data/Hora Fechamento"])
-            : null;
+          // 🔹 Parse Data Abertura (BR)
+          let dataAbertura = null;
+          if (r["Data Abertura"]) {
+            const [dia, mes, resto] = r["Data Abertura"].split("/");
+            const [ano, hora] = resto.split(" ");
+            const [h = 0, m = 0, s = 0] = hora ? hora.split(":") : [];
+            dataAbertura = new Date(
+              parseInt(ano),
+              parseInt(mes) - 1,
+              parseInt(dia),
+              parseInt(h),
+              parseInt(m),
+              parseInt(s)
+            );
+          }
+
+          // 🔹 Parse Data Fechamento (BR)
+          let dataFechamento = null;
+          if (r["Data/Hora Fechamento"]) {
+            const [dia, mes, resto] = r["Data/Hora Fechamento"].split("/");
+            const [ano, hora] = resto.split(" ");
+            const [h = 0, m = 0, s = 0] = hora ? hora.split(":") : [];
+            dataFechamento = new Date(
+              parseInt(ano),
+              parseInt(mes) - 1,
+              parseInt(dia),
+              parseInt(h),
+              parseInt(m),
+              parseInt(s)
+            );
+          }
 
           return {
             OS_ID: r["OS_ID"] || "",
@@ -70,7 +101,7 @@ const Dashboard = () => {
             DataFechamento: dataFechamento
               ? dataFechamento.toLocaleString("pt-BR")
               : "",
-            TempoAberto: r["Tempo em Aberto (dias)"],
+            TempoAberto: r["Tempo em Aberto"],
           };
         });
 
@@ -91,27 +122,22 @@ const Dashboard = () => {
     if (filterPorta) temp = temp.filter((d) => d.Porta === filterPorta);
     if (filterStatus) temp = temp.filter((d) => d.StatusOS === filterStatus);
     if (filterServico) temp = temp.filter((d) => d.Servico === filterServico);
+
     if (filterStartDate)
-      temp = temp.filter((d) => d.DataAberturaISO >= filterStartDate);
+      temp = temp.filter((d) => d.DataAberturaISO >= filterStartDate.toISOString().split("T")[0]);
     if (filterEndDate)
-      temp = temp.filter((d) => d.DataAberturaISO <= filterEndDate);
+      temp = temp.filter((d) => d.DataAberturaISO <= filterEndDate.toISOString().split("T")[0]);
+
     setFiltered(temp);
-  }, [
-    filterPorta,
-    filterStatus,
-    filterServico,
-    filterStartDate,
-    filterEndDate,
-    data,
-  ]);
+  }, [filterPorta, filterStatus, filterServico, filterStartDate, filterEndDate, data]);
 
   // Resetar filtros
   const resetFilters = () => {
     setFilterPorta("");
     setFilterStatus("");
     setFilterServico("");
-    setFilterStartDate("");
-    setFilterEndDate("");
+    setFilterStartDate(null);
+    setFilterEndDate(null);
     setFiltered(data);
   };
 
@@ -161,25 +187,24 @@ const Dashboard = () => {
         </select>
 
         <div className="date-filter">
-          <label htmlFor="startDate">Data Inicial</label>
-          <input
-            id="startDate"
-            type="date"
-            lang="pt-BR"
-            value={filterStartDate}
-            onChange={(e) => setFilterStartDate(e.target.value)}
+          <label>Data Inicial</label>
+          <DatePicker
+            selected={filterStartDate}
+            onChange={(date) => setFilterStartDate(date)}
+            dateFormat="dd/MM/yyyy"
+            locale="pt-BR"
+            placeholderText="dd/mm/aaaa"
           />
 
-          <label htmlFor="endDate">Data Final</label>
-          <input
-            id="endDate"
-            type="date"
-            lang="pt-BR"
-            value={filterEndDate}
-            onChange={(e) => setFilterEndDate(e.target.value)}
+          <label>Data Final</label>
+          <DatePicker
+            selected={filterEndDate}
+            onChange={(date) => setFilterEndDate(date)}
+            dateFormat="dd/MM/yyyy"
+            locale="pt-BR"
+            placeholderText="dd/mm/aaaa"
           />
         </div>
-
 
         <button onClick={resetFilters} className="btn-reset">
           Resetar
@@ -195,11 +220,10 @@ const Dashboard = () => {
               <tr>
                 <th>OS</th>
                 <th>Status</th>
-                <th>Tempo em Aberto</th>
-                <th>Portas (ID)</th>
-                <th>Tipo de Manutenção</th>
-                <th>Solicitante</th>
                 <th>Data de Abertura</th>
+                <th>Portas (ID)</th>
+                <th>Tempo em Aberto</th>
+                <th>Tipo de Manutenção</th>
                 <th>Descrição da Abertura</th>
                 <th>Técnico Responsável</th>
                 <th>Data de Fechamento</th>
@@ -237,11 +261,10 @@ const Dashboard = () => {
                       row.StatusOS || "—"
                     )}
                   </td>
-                  <td>{row.TempoAberto || "—"}</td>
-                  <td>{row.Porta || "—"}</td>
-                  <td>{row.Servico || "—"}</td>
-                  <td>{row.Solicitante || "—"}</td>
                   <td>{row.DataAbertura || "—"}</td>
+                  <td>{row.Porta || "—"}</td>
+                  <td>{row.TempoAberto || "—"}</td>
+                  <td>{row.Servico || "—"}</td>
                   <td
                     style={{
                       maxWidth: "200px",
