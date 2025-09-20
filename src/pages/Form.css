@@ -3,12 +3,14 @@
   display: flex;
   justify-content: center;
   padding: 20px;
-  background: #f9fafb; /* fundo cinza claro */
+  background: #f9fafb;
+  /* fundo cinza claro */
   /* width: 100%; */
 }
 
 .form-card {
-  position: relative; /* necessário para a seta voltar */
+  position: relative;
+  /* necessário para a seta voltar */
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -40,7 +42,8 @@
   font-size: 14px;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 18px; /* espaço entre grupos */
+  margin-bottom: 18px;
+  /* espaço entre grupos */
 }
 
 .form input[type="text"],
@@ -100,7 +103,8 @@ fieldset label {
 .form input[type="checkbox"] {
   width: auto;
   margin-right: 10px;
-  transform: scale(1.15); /* radios maiores */
+  transform: scale(1.15);
+  /* radios maiores */
   cursor: pointer;
 }
 
@@ -167,6 +171,12 @@ fieldset label {
   transition: filter 0.2s, transform 0.2s;
 }
 
+@media (min-width:1024px) {
+  .back-arrow {
+    display: none!important;
+  }
+}
+
 .back-arrow:hover {
   filter: brightness(0.7);
   transform: scale(1.1);
@@ -187,12 +197,14 @@ fieldset label {
   -webkit-text-fill-color: #333 !important;
   transition: background-color 5000s ease-in-out 0s;
 }
+
 /* Cabeçalho do formulário */
 .form-header {
   display: flex;
   align-items: center;
-  
-  gap: 8px; /* espaço entre seta e título */
+
+  gap: 8px;
+  /* espaço entre seta e título */
   margin-bottom: 8px;
 }
 
@@ -200,7 +212,8 @@ fieldset label {
   font-size: 20px;
   font-weight: 600;
   color: #111827;
-  margin: 0; /* remove margem padrão */
+  margin: 0;
+  /* remove margem padrão */
   margin-left: 40px;
 }
 
@@ -229,9 +242,11 @@ fieldset label {
   width: 100%;
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
-  border: 1px solid #d1d5db; /* cinza suave */
+  border: 1px solid #d1d5db;
+  /* cinza suave */
   border-radius: 6px;
-  background-color: #f9fafb; /* leve cinza, diferente do branco puro */
+  background-color: #f9fafb;
+  /* leve cinza, diferente do branco puro */
   color: #111827;
   font-family: "Inter", sans-serif;
 
@@ -271,18 +286,21 @@ fieldset label {
 
 .form label {
   display: flex;
-  flex-direction: column; /* 🔹 garante quebra embaixo */
+  flex-direction: column;
+  /* 🔹 garante quebra embaixo */
   font-size: 0.9rem;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 1rem; /* 🔹 espaçamento entre cada campo */
+  margin-bottom: 1rem;
+  /* 🔹 espaçamento entre cada campo */
 }
 
 /* 🔹 Espaço entre texto do label e input/select */
 .form label input,
 .form label select,
 .form label textarea {
-  margin-top: 0.4rem; /* aumenta distância entre texto e campo */
+  margin-top: 0.4rem;
+  /* aumenta distância entre texto e campo */
 }
 
 /* 🔹 Estilização geral */
@@ -316,6 +334,232 @@ fieldset label {
 
 /* 🔹 Chrome e Edge - força largura alinhada */
 .form select::-ms-expand {
-  display: none; /* remove seta antiga IE/Edge */
+  display: none;
+  /* remove seta antiga IE/Edge */
 }
 
+
+/* Container */
+.form-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  background: #f9fafb;
+}
+
+/* Card do formulário */
+.form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 720px; /* 🔹 largura máxima no desktop */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* Cabeçalho */
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.form-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.form-subtitle {
+  font-size: 14px;
+  text-align: left;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+/* Labels */
+.form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 18px;
+}
+
+/* Inputs, Selects, Textarea */
+.form input[type="text"],
+.form input[type="number"],
+.form input[type="email"],
+.form input[type="date"],
+.form textarea,
+.form select {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form input:focus,
+.form textarea:focus,
+.form select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  outline: none;
+}
+
+.form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Select com ícone customizado */
+.form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M19 9l-7 7-7-7'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+/* Botões */
+.form-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  flex: 2;
+  background: #2563eb;
+  color: #fff;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  flex: 1;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .form-card {
+    padding: 24px 16px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    flex: none;
+    width: 100%;
+  }
+}
+
+
+/* Normalizar inputs, selects e textarea */
+.form input[type="text"],
+.form input[type="number"],
+.form input[type="email"],
+.form input[type="date"],
+.form textarea,
+.form select {
+  width: 100%;
+  padding: 12px 14px;  /* 🔹 padding unificado */
+  margin-top: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;    /* 🔹 garante altura consistente */
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+/* Corrigir altura do select */
+.form select {
+  height: 44px;   /* 🔹 mesma altura dos inputs */
+  padding-right: 2.5rem; /* espaço para a seta */
+  display: flex;
+  align-items: center; /* centraliza texto vertical */
+}
+
+/* Corrigir textarea */
+.form textarea {
+  min-height: 100px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.form select {
+  width: 100%;
+  height: 44px; /* 🔹 altura unificada com os inputs */
+  padding: 0 2.5rem 0 14px; /* espaço p/ texto + seta */
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #111827;
+  font-family: "Inter", sans-serif;
+  box-sizing: border-box;
+
+  /* Remove estilo nativo */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* 🔹 Seta customizada */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M19 9l-7 7-7-7'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+}
+
+/* Hover e foco */
+.form select:hover {
+  border-color: #2563eb;
+  background-color: #fff;
+}
+
+.form select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  outline: none;
+}

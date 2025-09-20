@@ -39,7 +39,7 @@ export default function AcompanhamentoOS() {
           statusOS: r["Status OS"],
           solicitante: r["Solicitante"],
           setor: r["Setor"],
-          descricaoFinal: r["Descrição Técnica (Finalização)"],
+          descricaoTecnica: r["Descrição Técnica (Finalização)"] || "",
           tecnicoFinal: r["Técnico Responsável (Finalização)"],
           dataFechamento: r["Data/Hora Fechamento"],
           tempoAberto: r["Tempo em Aberto (dias)"],
@@ -64,7 +64,7 @@ export default function AcompanhamentoOS() {
         osId: os.id,
         status: os.statusOS || "Aberto",
         servico: os.servico || "",
-        descricaoTecnica: os.descricaoFinal || "",
+        descricaoTecnica: os.descricaoTecnica || "",
         tecnicoResponsavel: os.tecnicoFinal || "",
       }));
     }
@@ -107,7 +107,7 @@ export default function AcompanhamentoOS() {
       if (data.success) {
         alert("✅ O.S atualizada com sucesso!");
 
-        // recarregar planilha para refletir mudanças
+        // recarregar planilha
         const txt = await fetch(SHEET_CSV).then((r) => r.text());
         const parsed = Papa.parse(txt, { header: true, skipEmptyLines: true });
         const dataReload = parsed.data.map((r) => ({
@@ -120,14 +120,15 @@ export default function AcompanhamentoOS() {
           statusOS: r["Status OS"],
           solicitante: r["Solicitante"],
           setor: r["Setor"],
-          descricaoFinal: r["Descrição Técnica (Finalização)"],
+          descricaoTecnica: r["Descrição Técnica (Finalização)"] || "",
           tecnicoFinal: r["Técnico Responsável (Finalização)"],
           dataFechamento: r["Data/Hora Fechamento"],
           tempoAberto: r["Tempo em Aberto (dias)"],
         }));
         setRows(dataReload);
 
-        // 🔹 Limpar os campos do formulário
+        // 🔹 Limpar tudo após salvar
+        setSelected(null);
         setForm({
           osId: "",
           status: "Aberto",
@@ -135,7 +136,6 @@ export default function AcompanhamentoOS() {
           descricaoTecnica: "",
           tecnicoResponsavel: "",
         });
-        setSelected(null);
       } else {
         alert("⚠️ Falha ao atualizar: " + (data.message || "erro"));
       }
@@ -246,13 +246,14 @@ export default function AcompanhamentoOS() {
             name="tecnicoResponsavel"
             value={form.tecnicoResponsavel}
             onChange={handleChange}
+            required
           >
             <option value="">Selecione...</option>
             <option value="Victor Oliveira">Victor Oliveira</option>
           </select>
         </label>
 
-        {/* informações finais (somente leitura) */}
+        {/* informações finais */}
         {selected?.dataFechamento && (
           <div className="form-row">
             <label>

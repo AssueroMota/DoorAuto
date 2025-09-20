@@ -227,7 +227,7 @@ const Dashboard = () => {
                 <th>Descrição da Abertura</th>
                 <th>Técnico Responsável</th>
                 <th>Data de Fechamento</th>
-                <th>Descrição Final</th>
+                <th>Descrição Técnica</th>
               </tr>
             </thead>
             <tbody>

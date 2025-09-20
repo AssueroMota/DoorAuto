@@ -179,6 +179,13 @@
   margin-bottom: 32px;
 }
 
+/* Tablet (>=768px) */
+@media (min-width: 768px) {
+  .dashboard-header {
+    justify-content: center;
+  }
+}
+
 
 .table-scroll {
   overflow-x: auto;
@@ -477,6 +484,21 @@
   transition: all 0.2s ease-in-out;
 }
 
+@media (min-width: 768px) {
+  .react-datepicker-wrapper input {
+    width: auto;
+  }
+  .date-filter{
+    flex-direction: row;
+    align-items: center;
+  }
+}
+/* 🔹 Forçar o calendário a ficar sempre acima */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+
 .react-datepicker-wrapper input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
@@ -525,3 +547,7 @@
   color: white !important;
   border-radius: 50% !important;
 }
+
+
+
+

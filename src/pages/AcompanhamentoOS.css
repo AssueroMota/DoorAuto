@@ -82,3 +82,42 @@
 .form-row > label {
   flex: 1; /* 🔹 cada campo divide o espaço igualmente */
 }
+
+
+/* 🔹 Select estilizado com seta customizada */
+.os-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  padding-right: 2.5rem; /* espaço p/ seta */
+  font-size: 0.95rem;
+  color: #111827;
+  font-family: "Inter", sans-serif;
+
+  /* seta SVG */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M19 9l-7 7-7-7'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.os-form select:hover {
+  border-color: #2563eb;
+  background-color: #fff;
+}
+
+.os-form select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  background-color: #fff;
+  outline: none;
+}
+
+
