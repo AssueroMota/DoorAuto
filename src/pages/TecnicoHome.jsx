@@ -24,7 +24,7 @@ function TecnicoHome() {
 
         <div className="card">
           <span className="icon">✅</span>
-          <h2>Acompanhamento</h2>
+          <h2>Editar e finalizar OS's</h2>
           <p>Atualizar e encerrar ordens de serviço</p>
           <Link to="/fechamento" className="btn btn-green">Acessar</Link>
         </div>
