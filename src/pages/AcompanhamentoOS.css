@@ -47,7 +47,7 @@
 .os-form select:focus,
 .os-form textarea:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: #536884;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
   background: #fff;
 }
@@ -59,7 +59,7 @@
 
 /* Botão */
 .btn-primary {
-  background: #2563eb;
+  background: #536884;
   color: #fff;
   padding: 12px 16px;
   border: none;
@@ -109,15 +109,53 @@
 }
 
 .os-form select:hover {
-  border-color: #2563eb;
+  border-color: #536884;
   background-color: #fff;
 }
 
 .os-form select:focus {
-  border-color: #2563eb;
+  border-color: #536884;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
   background-color: #fff;
   outline: none;
 }
 
 
+
+
+/* 🔹 Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.lightbox-content {
+  position: relative;
+  width: 80%;
+  max-height: 90%;
+  background: #fff;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.lightbox-content img {
+  width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+.lightbox-content .btn-close {
+  position: absolute;
+  top: -35px;
+  right: 0;
+}

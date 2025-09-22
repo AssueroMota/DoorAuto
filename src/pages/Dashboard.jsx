@@ -18,7 +18,11 @@ import ptBR from "date-fns/locale/pt-BR";
 import "react-datepicker/dist/react-datepicker.css";
 
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase"; // 🔹 seu firebase.js
+import { db } from "../firebase";
+
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import "./Dashboard.css";
 import logo from "../assets/logo.png";
 
@@ -35,8 +39,11 @@ const Dashboard = () => {
   const [filterServico, setFilterServico] = useState("");
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
 
-  // Carregar dados do Firestore
+  // 🔹 Carregar dados do Firestore
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -47,7 +54,6 @@ const Dashboard = () => {
           const dataAbertura = d.dataAbertura?.toDate
             ? d.dataAbertura.toDate()
             : null;
-
           const dataFechamento = d.dataFechamento?.toDate
             ? d.dataFechamento.toDate()
             : null;
@@ -62,24 +68,34 @@ const Dashboard = () => {
             StatusOS: d.statusOS || "",
             DescricaoAbertura: d.descricao || "",
             TecnicoAbertura: d.tecnico || "",
+
+            // Strings formatadas
             DataAbertura: dataAbertura
               ? dataAbertura.toLocaleString("pt-BR")
               : "",
             DataAberturaISO: dataAbertura
               ? dataAbertura.toISOString().split("T")[0]
               : "",
-            DescricaoFinal: d.descricaoTecnica || "",
-            TecnicoResponsavel: d.tecnicoResponsavel || "",
             DataFechamento: dataFechamento
               ? dataFechamento.toLocaleString("pt-BR")
               : "",
             DataFechamentoISO: dataFechamento
               ? dataFechamento.toISOString().split("T")[0]
               : "",
+
+            // Objetos Date (para cálculos)
+            DataAberturaObj: dataAbertura || null,
+            DataFechamentoObj: dataFechamento || null,
+
+            // Outros
+            DescricaoFinal: d.descricaoTecnica || "",
+            TecnicoResponsavel: d.tecnicoResponsavel || "",
+            fotos: d.fotos || [],
+            fotosFinais: d.fotosFinal || [],
           };
         });
 
-        // Ordenar pela OS_ID
+        // Ordenar pela numeração da OS
         const sorted = docs.sort((a, b) => {
           const numA = parseInt(String(a.OS_ID).replace("OS-", ""), 10) || 0;
           const numB = parseInt(String(b.OS_ID).replace("OS-", ""), 10) || 0;
@@ -89,14 +105,165 @@ const Dashboard = () => {
         setData(sorted);
         setFiltered(sorted);
       } catch (err) {
-        console.error("❌ Erro ao carregar dados:", err);
+        console.error("❌ Erro ao carregar Firestore:", err);
       }
     };
 
     fetchData();
   }, []);
 
-  // Aplicar filtros
+
+
+  // Função para abrir modal
+  const openModal = (title, content) => {
+    setModalTitle(title);
+    setModalContent(content || "—");
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setModalContent("");
+    setModalTitle("");
+  };
+
+
+  // 🔹 Gerar PDF no estilo do print
+  const generatePDF = (row) => {
+    const doc = new jsPDF("p", "mm", "a4");
+
+    // 🔹 Calcular tempo total (em horas:minutos)
+    let tempoTotal = "—";
+    if (row.DataAberturaObj && row.DataFechamentoObj) {
+      try {
+        const diffMs = row.DataFechamentoObj - row.DataAberturaObj;
+        const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutos = Math.floor((diffMs / (1000 * 60)) % 60);
+        tempoTotal = `${diffHoras}h ${diffMinutos}min`;
+      } catch (e) {
+        console.error("Erro ao calcular tempo total:", e);
+      }
+    }
+
+    // Logo
+    doc.addImage(logo, "PNG", 14, 10, 50, 20);
+
+    // Cabeçalho
+    doc.setFontSize(16);
+    doc.text("ORDEM DE SERVIÇO", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Nº OS: ${row.OS_ID}`, 195, 15, { align: "right" });
+    doc.text(`Status: ${row.StatusOS}`, 195, 20, { align: "right" });
+
+    const headerBlue = {
+      fillColor: [83, 104, 132],
+      textColor: 255,
+      halign: "center",
+    };
+
+    // Descrição da Solicitação
+    autoTable(doc, {
+      startY: 35,
+      theme: "grid",
+      head: [
+        ["Nome do solicitante", "Tipo de manutenção", "Área", "Data/Hora"],
+      ],
+      body: [
+        [
+          row.Solicitante || "—",
+          row.Servico || "—",
+          row.Setor || "—",
+          row.DataAbertura || "—",
+        ],
+      ],
+      headStyles: headerBlue,
+      bodyStyles: { halign: "center" },
+    });
+
+    // Equipamento
+    autoTable(doc, {
+      theme: "grid",
+      head: [["Porta ID", "Descrição de Abertura", "Status"]],
+      body: [[row.Porta || "—", row.DescricaoAbertura || "—", row.StatusOS || "—"]],
+      headStyles: headerBlue,
+      bodyStyles: { halign: "center" },
+    });
+
+
+    // Descrição do Técnico
+    autoTable(doc, {
+      theme: "grid",
+      head: [["Descrição do Técnico"]],
+      body: [[row.DescricaoFinal || "—"]],
+      headStyles: headerBlue,
+    });
+
+
+    // Serviços
+    autoTable(doc, {
+      theme: "grid",
+      head: [
+        [
+          "Nome do Técnico",
+          "Data inicial",
+          "Hora inicial",
+          "Data final",
+          "Hora final"
+
+        ],
+      ],
+      body: [
+        [
+          row.TecnicoResponsavel || "—",
+          row.DataAbertura ? row.DataAbertura.split(" ")[0] : "—",
+          row.DataAbertura ? row.DataAbertura.split(" ")[1] : "—",
+          row.DataFechamento ? row.DataFechamento.split(" ")[0] : "—",
+          row.DataFechamento ? row.DataFechamento.split(" ")[1] : "—"
+        ],
+      ],
+      headStyles: headerBlue,
+      bodyStyles: { halign: "center" },
+    });
+
+    let y = doc.lastAutoTable.finalY + 10;
+
+    // Fotos Abertura
+    if (row.fotos?.length) {
+      doc.text("Fotos da Abertura:", 14, y);
+      y += 5;
+      row.fotos.forEach((url, i) => {
+        try {
+          doc.addImage(url, "JPEG", 14 + i * 60, y, 50, 40);
+        } catch (err) {
+          console.error("Erro ao adicionar foto de abertura:", err);
+        }
+      });
+      y += 50;
+    }
+
+    // Fotos Finalização
+    if (row.fotosFinais?.length) {
+      doc.text("Fotos da Finalização:", 14, y);
+      y += 5;
+      row.fotosFinais.forEach((url, i) => {
+        try {
+          doc.addImage(url, "JPEG", 14 + i * 60, y, 50, 40);
+        } catch (err) {
+          console.error("Erro ao adicionar foto final:", err);
+        }
+      });
+      y += 50;
+    }
+
+    // Rodapé
+    doc.setFontSize(8);
+    doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, 14, 290);
+    doc.text("Página 1 de 1", 200, 290, { align: "right" });
+
+    doc.save(`${row.OS_ID}.pdf`);
+  };
+
+  // 🔹 Aplicar filtros
   useEffect(() => {
     let temp = [...data];
     if (filterPorta) temp = temp.filter((d) => d.Porta === filterPorta);
@@ -105,7 +272,8 @@ const Dashboard = () => {
 
     if (filterStartDate)
       temp = temp.filter(
-        (d) => d.DataAberturaISO >= filterStartDate.toISOString().split("T")[0]
+        (d) =>
+          d.DataAberturaISO >= filterStartDate.toISOString().split("T")[0]
       );
     if (filterEndDate)
       temp = temp.filter(
@@ -129,6 +297,9 @@ const Dashboard = () => {
     ...new Set(data.map((d) => d.Porta).filter(Boolean)),
   ];
 
+
+
+
   return (
     <div className="dashboard-wrapper">
       {/* Header */}
@@ -139,7 +310,25 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 🔹 Filtros */}
+
+      {modalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeModal} // Fecha ao clicar no fundo
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()} // Impede fechar se clicar dentro
+          >
+            <h3>{modalTitle}</h3>
+            <p>{modalContent}</p>
+            <button onClick={closeModal} className="btn-close">Fechar</button>
+          </div>
+        </div>
+      )}
+
+
+      {/* Filtros */}
       <div className="filters">
         <select
           value={filterStatus}
@@ -147,7 +336,7 @@ const Dashboard = () => {
         >
           <option value="">Todos os Status</option>
           <option value="Aberta">Aberta</option>
-          <option value="Fechada">Fechada</option>
+          <option value="Fechado">Fechado</option>
           <option value="Andamento">Andamento</option>
         </select>
 
@@ -197,7 +386,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Tabela de OS */}
+      {/* Tabela */}
       <div className="table-section">
         <h2>Ordens de Serviço</h2>
         <div className="table-scroll">
@@ -206,111 +395,58 @@ const Dashboard = () => {
               <tr>
                 <th>OS</th>
                 <th>Status</th>
-                <th>Solicitante</th>
-                <th>Setor</th>
                 <th>Data de Abertura</th>
                 <th>Porta (ID)</th>
                 <th>Tipo</th>
-                <th>Tempo em Aberto</th>
-                <th>Descrição da Abertura</th>
+                <th>Solicitante</th>
+                <th>Setor</th>
+                <th>Descrição Abertura</th>
                 <th>Técnico Responsável</th>
                 <th>Data de Fechamento</th>
-                <th>Descrição Técnica</th>
+                <th>Descrição do Técnico</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((row, i) => (
                 <tr key={i}>
-                  <td>{row.OS_ID}</td>
-                  <td>
-                    {row.StatusOS?.toLowerCase().includes("aberta") ? (
-                      <span
-                        style={{
-                          background: "#fee2e2",
-                          color: "#dc2626",
-                          padding: "2px 6px",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        Aberta
-                      </span>
-                    ) : row.StatusOS?.toLowerCase().includes("fechada") ? (
-                      <span
-                        style={{
-                          background: "#dcfce7",
-                          color: "#16a34a",
-                          padding: "2px 6px",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        Fechada
-                      </span>
-                    ) : (
-                      row.StatusOS || "—"
-                    )}
+                  <td
+                    style={{ cursor: "pointer", textDecoration: "underline" }}
+                    onClick={() => generatePDF(row)}
+                  >
+                    {row.OS_ID}
                   </td>
-                  <td>{row.Solicitante || "—"}</td>
-                  <td>{row.Setor || "—"}</td>
+                  <td>{row.StatusOS}</td>
                   <td>{row.DataAbertura || "—"}</td>
                   <td>{row.Porta || "—"}</td>
                   <td>{row.Servico || "—"}</td>
-                  <td>{row.TempoAberto || "—"}</td>
+                  <td>{row.Solicitante || "—"}</td>
+                  <td>{row.Setor || "—"}</td>
+
+                  {/* 🔹 Célula clicável (Descrição Abertura) */}
                   <td
-                    style={{
-                      maxWidth: "200px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      cursor: "pointer",
-                      color: "#1e293b",
-                      textDecoration: "underline",
-                    }}
-                    onClick={() => setSelectedRelato(row.DescricaoAbertura)}
+                    style={{ cursor: "pointer", textDecoration: "underline"  }}
+                    onClick={() => openModal("Descrição de Abertura", row.DescricaoAbertura)}
                   >
                     {row.DescricaoAbertura || "—"}
                   </td>
+
                   <td>{row.TecnicoResponsavel || "—"}</td>
                   <td>{row.DataFechamento || "—"}</td>
+
+                  {/* 🔹 Célula clicável (Descrição Técnica) */}
                   <td
-                    style={{
-                      maxWidth: "200px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      cursor: "pointer",
-                      color: "#1e293b",
-                      textDecoration: "underline",
-                    }}
-                    onClick={() => setSelectedRelato(row.DescricaoFinal)}
+                    style={{ cursor: "pointer",  textDecoration: "underline" }}
+                    onClick={() => openModal("Descrição Técnica", row.DescricaoFinal)}
                   >
                     {row.DescricaoFinal || "—"}
                   </td>
                 </tr>
               ))}
             </tbody>
+
           </table>
         </div>
       </div>
-
-      {/* Modal de descrições */}
-      {selectedRelato && (
-        <div className="modal-overlay" onClick={() => setSelectedRelato(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Detalhes</h3>
-              <button
-                className="modal-close"
-                onClick={() => setSelectedRelato(null)}
-              >
-                ✖
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>{selectedRelato}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* KPIs */}
       <div className="kpi-section">

@@ -389,3 +389,15 @@
     transform: scale(1);
   }
 }
+
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.logo-home {
+  width: 100%; /* ajuste aqui o tamanho da logo */
+  height: auto;
+}

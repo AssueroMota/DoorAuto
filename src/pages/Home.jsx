@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
+import logo from "../assets/logo.png"; // ✅ importa sua logo
 
 function Home() {
   const [showModal, setShowModal] = useState(true); // modal inicial
@@ -14,7 +15,6 @@ function Home() {
   };
 
   const handleTecnico = () => {
-    // se já autenticado não pede de novo
     if (localStorage.getItem("tecnicoAuth") === "true") {
       navigate("/tecnico-home");
     } else {
@@ -34,11 +34,16 @@ function Home() {
 
   return (
     <div className="home-container">
+      {/* 🔹 Logo no topo */}
+      <div className="logo-container">
+        <img src={logo} alt="Logo da Empresa" className="logo-home" />
+      </div>
+
       <h1 className="home-title">
-        Sistema de Gestão de Manutenção Portas Automáticas
+        Sistema de Gestão de Manutenção <br /> Portas Automáticas
       </h1>
 
-      {/* Modal inicial com Cliente e Técnico */}
+      {/* Modal inicial */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
