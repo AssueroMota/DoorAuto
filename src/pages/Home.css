@@ -98,7 +98,7 @@
   cursor: pointer;
   font-size: 16px;
   color: #1e293b;
-  margin-bottom: 20px;
+  /* margin-bottom: 20px; */
   font-weight: 500;
   display: inline-block;
 }
@@ -242,7 +242,7 @@
   border-radius: 12px;
   padding: 32px;
   max-width: 600px;
-  width: 90%;
+  width: 80%;
   text-align: center;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.3s ease;

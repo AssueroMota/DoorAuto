@@ -166,15 +166,10 @@ export default function AcompanhamentoOS() {
 
   return (
     <div className="os-wrapper">
-      <div className="form-header" style={{ alignItems: "flex-start" }}>
-        <Link
-          to="/tecnico-home"
-          className="back-arrow"
-          aria-label="Voltar"
-        ></Link>
+      <div className="back-arrow" onClick={() => window.history.back()} />
+      <div className="form-header">
         <h1>Acompanhamento de Ordens de Serviço</h1>
       </div>
-
       <form className="os-form" onSubmit={handleSubmit}>
         <label>
           Número da O.S
@@ -189,8 +184,8 @@ export default function AcompanhamentoOS() {
                 {`OS-${String(idx + 1).padStart(2, "0")}`} -{" "}
                 {r.dataAbertura?.toDate
                   ? r.dataAbertura
-                      .toDate()
-                      .toLocaleDateString("pt-BR")
+                    .toDate()
+                    .toLocaleDateString("pt-BR")
                   : ""}
               </option>
             ))}
@@ -217,8 +212,8 @@ export default function AcompanhamentoOS() {
                   value={
                     selected.dataAbertura?.toDate
                       ? selected.dataAbertura
-                          .toDate()
-                          .toLocaleDateString("pt-BR")
+                        .toDate()
+                        .toLocaleDateString("pt-BR")
                       : ""
                   }
                   readOnly

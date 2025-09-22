@@ -303,8 +303,8 @@ const Dashboard = () => {
   return (
     <div className="dashboard-wrapper">
       {/* Header */}
-      <div className="dashboard-header">
         <div className="back-arrow" onClick={() => window.history.back()} />
+      <div className="dashboard-header">
         <div className="logo-container">
           <img src={logo} width={320} alt="Logo" />
         </div>

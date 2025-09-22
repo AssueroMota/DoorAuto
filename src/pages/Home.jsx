@@ -39,9 +39,9 @@ function Home() {
         <img src={logo} alt="Logo da Empresa" className="logo-home" />
       </div>
 
-      <h1 className="home-title">
+      {/* <h1 className="home-title">
         Sistema de Gestão de Manutenção <br /> Portas Automáticas
-      </h1>
+      </h1> */}
 
       {/* Modal inicial */}
       {showModal && (
@@ -77,14 +77,14 @@ function Home() {
               placeholder="Digite a senha"
             />
             <div className="modal-actions">
-              <button className="btn btn-blue" onClick={handleLogin}>
-                Entrar
-              </button>
               <button
                 className="btn btn-gray"
                 onClick={() => setShowSenha(false)}
               >
                 Voltar
+              </button>
+              <button className="btn btn-blue" onClick={handleLogin}>
+                Entrar
               </button>
             </div>
           </div>

@@ -111,8 +111,8 @@ function Tecnico() {
   return (
     <div className="form-wrapper">
       <div className="form-card">
-        <div className="form-header">
           <Link to="/tecnico-home" className="back-arrow" aria-label="Voltar"></Link>
+        <div className="form-header">
           <h1 className="form-title">Formulário do Técnico</h1>
         </div>
         <p className="form-subtitle">Preencha os dados do atendimento técnico</p>
