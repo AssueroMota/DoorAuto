@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Papa from "papaparse";
 import {
   BarChart,
   Bar,
@@ -18,6 +17,8 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import ptBR from "date-fns/locale/pt-BR";
 import "react-datepicker/dist/react-datepicker.css";
 
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase"; // 🔹 seu firebase.js
 import "./Dashboard.css";
 import logo from "../assets/logo.png";
 
@@ -35,77 +36,51 @@ const Dashboard = () => {
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
 
-  // Carregar dados
+  // Carregar dados do Firestore
   useEffect(() => {
-    fetch(
-      "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5LGgZ5j-zZvZpXaXMfwX1781b-KukF0SlJlGN2SSGQHPyJeuxGWNuUzwgwsHQ3cuVEiv2XrltD-tR/pub?gid=0&single=true&output=csv"
-    )
-      .then((res) => res.text())
-      .then((csvText) => {
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          delimiter: ",",
-        });
+    const fetchData = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "ordensDeServico"));
+        const docs = snapshot.docs.map((doc) => {
+          const d = doc.data();
 
-        const mapped = parsed.data.map((r) => {
-          // 🔹 Parse Data Abertura (BR)
-          let dataAbertura = null;
-          if (r["Data Abertura"]) {
-            const [dia, mes, resto] = r["Data Abertura"].split("/");
-            const [ano, hora] = resto.split(" ");
-            const [h = 0, m = 0, s = 0] = hora ? hora.split(":") : [];
-            dataAbertura = new Date(
-              parseInt(ano),
-              parseInt(mes) - 1,
-              parseInt(dia),
-              parseInt(h),
-              parseInt(m),
-              parseInt(s)
-            );
-          }
+          const dataAbertura = d.dataAbertura?.toDate
+            ? d.dataAbertura.toDate()
+            : null;
 
-          // 🔹 Parse Data Fechamento (BR)
-          let dataFechamento = null;
-          if (r["Data/Hora Fechamento"]) {
-            const [dia, mes, resto] = r["Data/Hora Fechamento"].split("/");
-            const [ano, hora] = resto.split(" ");
-            const [h = 0, m = 0, s = 0] = hora ? hora.split(":") : [];
-            dataFechamento = new Date(
-              parseInt(ano),
-              parseInt(mes) - 1,
-              parseInt(dia),
-              parseInt(h),
-              parseInt(m),
-              parseInt(s)
-            );
-          }
+          const dataFechamento = d.dataFechamento?.toDate
+            ? d.dataFechamento.toDate()
+            : null;
 
           return {
-            OS_ID: r["OS_ID"] || "",
-            Porta: r["Porta (ID)"],
-            Servico: r["Serviço"],
-            TecnicoAbertura: r["Técnico (Abertura)"],
+            id: doc.id,
+            OS_ID: d.numeroOS || doc.id,
+            Porta: d.porta || "",
+            Servico: d.servico || "",
+            Solicitante: d.solicitante || "",
+            Setor: d.setor || "",
+            StatusOS: d.statusOS || "",
+            DescricaoAbertura: d.descricao || "",
+            TecnicoAbertura: d.tecnico || "",
             DataAbertura: dataAbertura
               ? dataAbertura.toLocaleString("pt-BR")
               : "",
             DataAberturaISO: dataAbertura
               ? dataAbertura.toISOString().split("T")[0]
               : "",
-            DescricaoAbertura: r["Descrição Abertura"],
-            StatusOS: r["Status OS"],
-            Solicitante: r["Solicitante"],
-            Setor: r["Setor"],
-            DescricaoFinal: r["Descrição Técnica (Finalização)"],
-            TecnicoResponsavel: r["Técnico Responsável (Finalização)"],
+            DescricaoFinal: d.descricaoTecnica || "",
+            TecnicoResponsavel: d.tecnicoResponsavel || "",
             DataFechamento: dataFechamento
               ? dataFechamento.toLocaleString("pt-BR")
               : "",
-            TempoAberto: r["Tempo em Aberto"],
+            DataFechamentoISO: dataFechamento
+              ? dataFechamento.toISOString().split("T")[0]
+              : "",
           };
         });
 
-        const sorted = mapped.sort((a, b) => {
+        // Ordenar pela OS_ID
+        const sorted = docs.sort((a, b) => {
           const numA = parseInt(String(a.OS_ID).replace("OS-", ""), 10) || 0;
           const numB = parseInt(String(b.OS_ID).replace("OS-", ""), 10) || 0;
           return numB - numA;
@@ -113,7 +88,12 @@ const Dashboard = () => {
 
         setData(sorted);
         setFiltered(sorted);
-      });
+      } catch (err) {
+        console.error("❌ Erro ao carregar dados:", err);
+      }
+    };
+
+    fetchData();
   }, []);
 
   // Aplicar filtros
@@ -124,9 +104,13 @@ const Dashboard = () => {
     if (filterServico) temp = temp.filter((d) => d.Servico === filterServico);
 
     if (filterStartDate)
-      temp = temp.filter((d) => d.DataAberturaISO >= filterStartDate.toISOString().split("T")[0]);
+      temp = temp.filter(
+        (d) => d.DataAberturaISO >= filterStartDate.toISOString().split("T")[0]
+      );
     if (filterEndDate)
-      temp = temp.filter((d) => d.DataAberturaISO <= filterEndDate.toISOString().split("T")[0]);
+      temp = temp.filter(
+        (d) => d.DataAberturaISO <= filterEndDate.toISOString().split("T")[0]
+      );
 
     setFiltered(temp);
   }, [filterPorta, filterStatus, filterServico, filterStartDate, filterEndDate, data]);
@@ -141,7 +125,9 @@ const Dashboard = () => {
     setFiltered(data);
   };
 
-  const portasDisponiveis = [...new Set(data.map((d) => d.Porta).filter(Boolean))];
+  const portasDisponiveis = [
+    ...new Set(data.map((d) => d.Porta).filter(Boolean)),
+  ];
 
   return (
     <div className="dashboard-wrapper">
@@ -220,10 +206,12 @@ const Dashboard = () => {
               <tr>
                 <th>OS</th>
                 <th>Status</th>
+                <th>Solicitante</th>
+                <th>Setor</th>
                 <th>Data de Abertura</th>
-                <th>Portas (ID)</th>
+                <th>Porta (ID)</th>
+                <th>Tipo</th>
                 <th>Tempo em Aberto</th>
-                <th>Tipo de Manutenção</th>
                 <th>Descrição da Abertura</th>
                 <th>Técnico Responsável</th>
                 <th>Data de Fechamento</th>
@@ -261,10 +249,12 @@ const Dashboard = () => {
                       row.StatusOS || "—"
                     )}
                   </td>
+                  <td>{row.Solicitante || "—"}</td>
+                  <td>{row.Setor || "—"}</td>
                   <td>{row.DataAbertura || "—"}</td>
                   <td>{row.Porta || "—"}</td>
-                  <td>{row.TempoAberto || "—"}</td>
                   <td>{row.Servico || "—"}</td>
+                  <td>{row.TempoAberto || "—"}</td>
                   <td
                     style={{
                       maxWidth: "200px",

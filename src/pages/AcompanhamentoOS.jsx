@@ -1,72 +1,72 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Papa from "papaparse";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../firebase"; // 🔹 seu firebase.js
 import "./AcompanhamentoOS.css";
 
-const SHEET_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5LGgZ5j-zZvZpXaXMfwX1781b-KukF0SlJlGN2SSGQHPyJeuxGWNuUzwgwsHQ3cuVEiv2XrltD-tR/pub?gid=0&single=true&output=csv";
-
-const ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbwWEujv7p8kkcShDNV2c1cz4LIIQzu8E5CaZ2BfQ1RH596h2HhOtrCqdrBrk_fQkJu4/exec";
-
 export default function AcompanhamentoOS() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // form
+  const [ordens, setOrdens] = useState([]);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
     osId: "",
-    status: "Aberto",
+    status: "Aberta",
     descricaoTecnica: "",
     tecnicoResponsavel: "",
     servico: "",
   });
+  const [loading, setLoading] = useState(false);
 
-  // carregar planilha
+  // Upload de fotos finais
+  const [fotosFinal, setFotosFinal] = useState([null, null, null]);
+  const [previewsFinal, setPreviewsFinal] = useState([null, null, null]);
+
+  // Buscar O.S do Firestore
   useEffect(() => {
-    fetch(SHEET_CSV)
-      .then((r) => r.text())
-      .then((csv) => {
-        const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
-        const data = parsed.data.map((r) => ({
-          id: r["OS_ID"],
-          porta: r["Porta (ID)"],
-          servico: r["Serviço"],
-          tecnicoAbertura: r["Técnico (Abertura)"],
-          dataAbertura: r["Data Abertura"],
-          descricaoAbertura: r["Descrição Abertura"],
-          statusOS: r["Status OS"],
-          solicitante: r["Solicitante"],
-          setor: r["Setor"],
-          descricaoTecnica: r["Descrição Técnica (Finalização)"] || "",
-          tecnicoFinal: r["Técnico Responsável (Finalização)"],
-          dataFechamento: r["Data/Hora Fechamento"],
-          tempoAberto: r["Tempo em Aberto (dias)"],
+    const fetchData = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "ordensDeServico"));
+        let docs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
         }));
-        setRows(data);
-      });
+
+        // 🔹 Ordenar pela data de abertura (mais antigas primeiro)
+        docs = docs.sort(
+          (a, b) =>
+            (a.dataAbertura?.seconds || 0) -
+            (b.dataAbertura?.seconds || 0)
+        );
+
+        // 🔹 Filtrar apenas abertas/andamento
+        const abertas = docs.filter((os) =>
+          ["Aberta", "Andamento"].includes(os.statusOS)
+        );
+
+        setOrdens(abertas);
+      } catch (err) {
+        console.error("Erro ao carregar O.S:", err);
+      }
+    };
+    fetchData();
   }, []);
 
-  // apenas OS em Aberta/Andamento no select
-  const abertasOuAndamento = useMemo(
-    () => rows.filter((r) => /aberta|andamento/i.test(r.statusOS ?? "")),
-    [rows]
-  );
-
   const handleSelectOS = (osId) => {
-    setForm((p) => ({ ...p, osId }));
-    const os = rows.find((r) => r.id === osId);
+    const os = ordens.find((r) => r.id === osId);
     setSelected(os || null);
     if (os) {
-      setForm((p) => ({
-        ...p,
+      setForm({
         osId: os.id,
-        status: os.statusOS || "Aberto",
+        status: os.statusOS || "Aberta",
         servico: os.servico || "",
         descricaoTecnica: os.descricaoTecnica || "",
-        tecnicoResponsavel: os.tecnicoFinal || "",
-      }));
+        tecnicoResponsavel: os.tecnicoResponsavel || "",
+      });
     }
   };
 
@@ -75,11 +75,20 @@ export default function AcompanhamentoOS() {
     setForm((p) => ({ ...p, [name]: value }));
   };
 
+  const handleFotoFinalChange = (index, file) => {
+    const newFotos = [...fotosFinal];
+    newFotos[index] = file;
+    setFotosFinal(newFotos);
+
+    const newPreviews = [...previewsFinal];
+    newPreviews[index] = URL.createObjectURL(file);
+    setPreviewsFinal(newPreviews);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.osId) return alert("Escolha o número da O.S.");
 
-    // se for fechar, exigir técnico e descrição
     if (form.status === "Fechado") {
       if (!form.tecnicoResponsavel)
         return alert("Informe o Técnico Responsável para fechar a O.S.");
@@ -89,58 +98,20 @@ export default function AcompanhamentoOS() {
 
     setLoading(true);
     try {
-      const payload = {
-        action: "update",
-        OS_ID: form.osId,
-        StatusOS: form.status,
-        Servico: form.servico,
-        DescricaoTecnica: form.descricaoTecnica,
-        TecnicoResponsavel: form.tecnicoResponsavel,
-      };
+      const ref = doc(db, "ordensDeServico", form.osId);
 
-      const res = await fetch(ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify(payload),
+      await updateDoc(ref, {
+        statusOS: form.status,
+        servico: form.servico,
+        descricaoTecnica: form.descricaoTecnica,
+        tecnicoResponsavel: form.tecnicoResponsavel,
+        dataFechamento: form.status === "Fechado" ? serverTimestamp() : null,
+        // 🔹 futuramente salvar fotos finais (Cloudinary)
       });
-      const data = await res.json();
 
-      if (data.success) {
-        alert("✅ O.S atualizada com sucesso!");
-
-        // recarregar planilha
-        const txt = await fetch(SHEET_CSV).then((r) => r.text());
-        const parsed = Papa.parse(txt, { header: true, skipEmptyLines: true });
-        const dataReload = parsed.data.map((r) => ({
-          id: r["OS_ID"],
-          porta: r["Porta (ID)"],
-          servico: r["Serviço"],
-          tecnicoAbertura: r["Técnico (Abertura)"],
-          dataAbertura: r["Data Abertura"],
-          descricaoAbertura: r["Descrição Abertura"],
-          statusOS: r["Status OS"],
-          solicitante: r["Solicitante"],
-          setor: r["Setor"],
-          descricaoTecnica: r["Descrição Técnica (Finalização)"] || "",
-          tecnicoFinal: r["Técnico Responsável (Finalização)"],
-          dataFechamento: r["Data/Hora Fechamento"],
-          tempoAberto: r["Tempo em Aberto (dias)"],
-        }));
-        setRows(dataReload);
-
-        // 🔹 Limpar tudo após salvar
-        setSelected(null);
-        setForm({
-          osId: "",
-          status: "Aberto",
-          servico: "",
-          descricaoTecnica: "",
-          tecnicoResponsavel: "",
-        });
-      } else {
-        alert("⚠️ Falha ao atualizar: " + (data.message || "erro"));
-      }
+      alert("✅ O.S atualizada com sucesso!");
     } catch (err) {
-      alert("❌ Erro ao enviar: " + err.message);
+      alert("❌ Erro ao atualizar: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -154,122 +125,149 @@ export default function AcompanhamentoOS() {
       </div>
 
       <form className="os-form" onSubmit={handleSubmit}>
-        <div className="form-row">
-          <label>
-            Número da O.S
-            <select
-              value={form.osId}
-              onChange={(e) => handleSelectOS(e.target.value)}
-              required
-            >
-              <option value="">Selecione...</option>
-              {abertasOuAndamento.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Status da O.S
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              required
-            >
-              <option value="Aberto">Aberto</option>
-              <option value="Andamento">Andamento</option>
-              <option value="Fechado">Fechado</option>
-            </select>
-          </label>
-        </div>
-
-        {/* campos somente leitura */}
-        <div className="form-row">
-          <label>
-            Solicitante
-            <input value={selected?.solicitante || ""} readOnly />
-          </label>
-          <label>
-            Setor
-            <input value={selected?.setor || ""} readOnly />
-          </label>
-        </div>
-
-        <div className="form-row">
-          <label>
-            Data de Abertura
-            <input value={selected?.dataAbertura || ""} readOnly />
-          </label>
-          <label>
-            Porta (ID)
-            <input value={selected?.porta || ""} readOnly />
-          </label>
-        </div>
-
         <label>
-          Descrição da Abertura
-          <textarea value={selected?.descricaoAbertura || ""} readOnly />
-        </label>
-
-        {/* campo editável */}
-        <label>
-          Tipo de Manutenção
+          Número da O.S
           <select
-            name="servico"
-            value={form.servico}
-            onChange={handleChange}
+            value={form.osId}
+            onChange={(e) => handleSelectOS(e.target.value)}
             required
           >
             <option value="">Selecione...</option>
-            <option value="Preventiva">Preventiva</option>
-            <option value="Corretiva">Corretiva</option>
+            {ordens.map((r, idx) => (
+              <option key={r.id} value={r.id}>
+                {`OS-${String(idx + 1).padStart(2, "0")}`} -{" "}
+                {r.dataAbertura?.toDate
+                  ? r.dataAbertura.toDate().toLocaleDateString("pt-BR")
+                  : ""}
+              </option>
+            ))}
           </select>
         </label>
 
-        {/* campos editáveis */}
-        <label>
-          Descrição Técnica
-          <textarea
-            name="descricaoTecnica"
-            value={form.descricaoTecnica}
-            onChange={handleChange}
-            placeholder="Detalhe o que foi feito, peças trocadas, testes, etc."
-          />
-        </label>
+        {selected && (
+          <>
+            <div className="form-row">
+              <label>
+                Solicitante
+                <input value={selected.solicitante || ""} readOnly />
+              </label>
+              <label>
+                Setor
+                <input value={selected.setor || ""} readOnly />
+              </label>
+            </div>
 
-        <label>
-          Técnico Responsável
-          <select
-            name="tecnicoResponsavel"
-            value={form.tecnicoResponsavel}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Selecione...</option>
-            <option value="Victor Oliveira">Victor Oliveira</option>
-          </select>
-        </label>
+            <div className="form-row">
+              <label>
+                Data de Abertura
+                <input
+                  value={
+                    selected.dataAbertura?.toDate
+                      ? selected.dataAbertura.toDate().toLocaleDateString("pt-BR")
+                      : ""
+                  }
+                  readOnly
+                />
+              </label>
+              <label>
+                Porta (ID)
+                <input value={selected.porta || ""} readOnly />
+              </label>
+            </div>
 
-        {/* informações finais */}
-        {selected?.dataFechamento && (
-          <div className="form-row">
             <label>
-              Data/Hora Fechamento
-              <input value={selected.dataFechamento} readOnly />
+              Descrição da Abertura
+              <textarea value={selected.descricao || ""} readOnly />
             </label>
+
+            {/* 🔹 Fotos iniciais (cliente/técnico) */}
+            {selected?.fotos?.length > 0 && (
+              <div className="upload-section">
+                <p>Fotos enviadas na abertura:</p>
+                <div className="upload-cards">
+                  {selected.fotos.map((url, i) => (
+                    <div key={i} className="upload-card">
+                      <img
+                        src={url}
+                        alt={`foto abertura ${i + 1}`}
+                        className="preview-img"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <label>
-              Tempo em Aberto (dias)
-              <input value={selected.tempoAberto || ""} readOnly />
+              Tipo de Manutenção
+              <select
+                name="servico"
+                value={form.servico}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione...</option>
+                <option value="Preventiva">Preventiva</option>
+                <option value="Corretiva">Corretiva</option>
+              </select>
             </label>
-          </div>
+
+            <label>
+              Descrição Técnica
+              <textarea
+                name="descricaoTecnica"
+                value={form.descricaoTecnica}
+                onChange={handleChange}
+                placeholder="Detalhe o que foi feito..."
+              />
+            </label>
+
+            <label>
+              Técnico Responsável
+              <select
+                name="tecnicoResponsavel"
+                value={form.tecnicoResponsavel}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione...</option>
+                <option value="Victor Oliveira">Victor Oliveira</option>
+              </select>
+            </label>
+
+            {/* 🔹 Upload fotos finais */}
+            <div className="upload-section">
+              <p>Fotos da finalização (máx 3)</p>
+              <div className="upload-cards">
+                {fotosFinal.map((_, index) => (
+                  <label key={index} className="upload-card">
+                    {previewsFinal[index] ? (
+                      <img
+                        src={previewsFinal[index]}
+                        alt={`Preview final ${index + 1}`}
+                        className="preview-img"
+                      />
+                    ) : (
+                      <span>+</span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) =>
+                        handleFotoFinalChange(index, e.target.files[0])
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </button>
+          </>
         )}
-
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Salvando..." : "Salvar"}
-        </button>
       </form>
     </div>
   );

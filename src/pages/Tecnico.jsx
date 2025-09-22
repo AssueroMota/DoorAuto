@@ -1,6 +1,8 @@
 import "./Form.css";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase"; // 🔹 importa seu firebase.js
 
 function Tecnico() {
   const [formData, setFormData] = useState({
@@ -10,11 +12,39 @@ function Tecnico() {
     porta: "",
   });
 
+  const [fotos, setFotos] = useState([null, null, null]);
+  const [previews, setPreviews] = useState([null, null, null]);
   const [loading, setLoading] = useState(false);
+
+  // 🔹 Upload no Cloudinary
+  const uploadToCloudinary = async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "doorauto_unsigned"); // seu preset
+    data.append("folder", "ordens");
+
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/dtxkiub5i/image/upload", // troque pelo seu cloud_name
+      { method: "POST", body: data }
+    );
+
+    const json = await res.json();
+    return json.secure_url;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFotoChange = (index, file) => {
+    const newFotos = [...fotos];
+    newFotos[index] = file;
+    setFotos(newFotos);
+
+    const newPreviews = [...previews];
+    newPreviews[index] = URL.createObjectURL(file);
+    setPreviews(newPreviews);
   };
 
   const validateForm = () => {
@@ -31,42 +61,48 @@ function Tecnico() {
 
     setLoading(true);
 
-    // 🔹 Data + hora automática
-    const now = new Date();
-    const dataAtual = now.toLocaleDateString("pt-BR");
-    const horaAtual = now.toLocaleTimeString("pt-BR");
-
-    const payload = {
-      action: "create",
-      ...formData,
-      data: `${dataAtual} ${horaAtual}`,
-      statusOS: "Aberta", // toda OS criada começa como Aberta
-    };
-
     try {
-      const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbwWEujv7p8kkcShDNV2c1cz4LIIQzu8E5CaZ2BfQ1RH596h2HhOtrCqdrBrk_fQkJu4/exec",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
+      // 🔹 Pega total de documentos para gerar próximo número
+      const ordensRef = collection(db, "ordensDeServico");
+      const snapshot = await getDocs(ordensRef);
+      const total = snapshot.size;
+      const numeroOS = `OS-${String(total + 1).padStart(2, "0")}`;
+
+      // 🔹 Upload das fotos
+      const uploadedUrls = [];
+      for (let i = 0; i < fotos.length; i++) {
+        if (fotos[i]) {
+          const url = await uploadToCloudinary(fotos[i]);
+          uploadedUrls.push(url);
         }
-      );
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert(`✅ Dados enviados! Seu ID é: ${data.osId}`);
-        setFormData({
-          tecnico: "",
-          setor: "",
-          descricao: "",
-          porta: "",
-        });
-      } else {
-        alert("⚠️ Houve um problema ao salvar.");
       }
+
+      // 🔹 Monta payload
+      const payload = {
+        ...formData,
+        numeroOS,
+        fotos: uploadedUrls.filter(Boolean),
+        dataAbertura: serverTimestamp(),
+        statusOS: "Aberta", // toda OS criada começa aberta
+        solicitante: formData.tecnico, // 👈 sempre registra o solicitante
+      };
+
+      // 🔹 Salva no Firestore
+      await addDoc(ordensRef, payload);
+
+      alert(`✅ Solicitação enviada com sucesso! Número: ${numeroOS}`);
+
+      // 🔹 Reseta formulário
+      setFormData({
+        tecnico: "",
+        setor: "",
+        descricao: "",
+        porta: "",
+      });
+      setFotos([null, null, null]);
+      setPreviews([null, null, null]);
     } catch (err) {
-      alert("❌ Erro ao enviar: " + err);
+      alert("❌ Erro ao enviar: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -94,7 +130,6 @@ function Tecnico() {
               <option value="Victor Oliveira">Victor Oliveira</option>
             </select>
           </label>
-
 
           <label>
             Setor
@@ -134,6 +169,34 @@ function Tecnico() {
             ></textarea>
           </label>
 
+          {/* Upload de fotos */}
+          <div className="upload-section">
+            <p>Fotos do atendimento (máx 3)</p>
+            <div className="upload-cards">
+              {fotos.map((_, index) => (
+                <label key={index} className="upload-card">
+                  {previews[index] ? (
+                    <img
+                      src={previews[index]}
+                      alt={`Preview ${index + 1}`}
+                      className="preview-img"
+                    />
+                  ) : (
+                    <span>+</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) =>
+                      handleFotoChange(index, e.target.files[0])
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="form-buttons">
             <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? "Enviando..." : "Enviar"}
@@ -142,14 +205,16 @@ function Tecnico() {
               type="reset"
               className="btn-secondary"
               disabled={loading}
-              onClick={() =>
+              onClick={() => {
                 setFormData({
                   tecnico: "",
                   setor: "",
                   descricao: "",
                   porta: "",
-                })
-              }
+                });
+                setFotos([null, null, null]);
+                setPreviews([null, null, null]);
+              }}
             >
               Limpar
             </button>
