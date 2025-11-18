@@ -7,7 +7,8 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../firebase"; // 🔹 seu firebase.js
+import { db } from "../firebase";
+import axios from "axios";
 import "./AcompanhamentoOS.css";
 
 export default function AcompanhamentoOS() {
@@ -22,15 +23,38 @@ export default function AcompanhamentoOS() {
   });
   const [loading, setLoading] = useState(false);
 
-  // Lightbox (somente para fotos da abertura)
+  // Lightbox (fotos da abertura)
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
 
-  // Upload de fotos finais
+  // Fotos finais
   const [fotosFinal, setFotosFinal] = useState([null, null, null]);
   const [previewsFinal, setPreviewsFinal] = useState([null, null, null]);
 
-  // 🔹 Buscar O.S
+  // ================================
+  // 🔥 FUNÇÃO DE UPLOAD PARA CLOUDINARY
+  // ================================
+  const uploadFoto = async (file) => {
+    if (!file) return null;
+
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "doorauto_unsigned"); // seu preset
+    data.append("folder", "ordens/finalizacao");
+
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/dtxkiub5i/image/upload`,
+        data
+      );
+      return res.data.secure_url;
+    } catch (err) {
+      console.error("Erro ao enviar para Cloudinary:", err);
+      return null;
+    }
+  };
+
+  // Buscar ordens
   const fetchData = async () => {
     try {
       const snapshot = await getDocs(collection(db, "ordensDeServico"));
@@ -39,21 +63,21 @@ export default function AcompanhamentoOS() {
         ...doc.data(),
       }));
 
-      // Ordenar pela data de abertura
+      // ordenar pela data de abertura
       docs = docs.sort(
         (a, b) =>
           (a.dataAbertura?.seconds || 0) -
           (b.dataAbertura?.seconds || 0)
       );
 
-      // Filtrar apenas abertas/andamento
+      // apenas abertas/andamento
       const abertas = docs.filter((os) =>
         ["Aberta", "Andamento"].includes(os.statusOS)
       );
 
       setOrdens(abertas);
     } catch (err) {
-      console.error("Erro ao carregar O.S:", err);
+      console.error("Erro ao carregar OS:", err);
     }
   };
 
@@ -64,6 +88,7 @@ export default function AcompanhamentoOS() {
   const handleSelectOS = (osId) => {
     const os = ordens.find((r) => r.id === osId);
     setSelected(os || null);
+
     if (os) {
       setForm({
         osId: os.id,
@@ -72,6 +97,7 @@ export default function AcompanhamentoOS() {
         descricaoTecnica: os.descricaoTecnica || "",
         tecnicoResponsavel: os.tecnicoResponsavel || "",
       });
+
       setPreviewsFinal([
         os.fotosFinal?.[0] || null,
         os.fotosFinal?.[1] || null,
@@ -82,17 +108,7 @@ export default function AcompanhamentoOS() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
-
-  // 🔹 Converter arquivo para base64
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFotoFinalChange = async (index, file) => {
@@ -101,51 +117,57 @@ export default function AcompanhamentoOS() {
     setFotosFinal(newFotos);
 
     if (file) {
-      const base64 = await fileToBase64(file);
+      const previewURL = URL.createObjectURL(file);
       const newPreviews = [...previewsFinal];
-      newPreviews[index] = base64;
+      newPreviews[index] = previewURL;
       setPreviewsFinal(newPreviews);
     }
   };
 
+  // ================================
+  // 🔥 SUBMIT — ENVIO FINALIZAÇÃO
+  // ================================
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.osId) return alert("Escolha o número da O.S.");
+    if (!form.osId) return alert("Escolha a O.S.");
 
     if (form.status === "Fechado") {
       if (!form.tecnicoResponsavel)
-        return alert("Informe o Técnico Responsável para fechar a O.S.");
+        return alert("Informe o Técnico Responsável");
       if (!form.descricaoTecnica.trim())
-        return alert("Escreva a Descrição Técnica para fechar a O.S.");
+        return alert("Descreva o serviço realizado");
     }
 
     setLoading(true);
+
     try {
       const refDoc = doc(db, "ordensDeServico", form.osId);
 
-      // Garantir sempre 3 slots
-      const fotosBase64 = [null, null, null];
+      // Envio para cloudinary (fotos finais)
+      const fotosURLs = [null, null, null];
+
       for (let i = 0; i < 3; i++) {
         if (fotosFinal[i]) {
-          const base64 = await fileToBase64(fotosFinal[i]);
-          fotosBase64[i] = base64;
+          const url = await uploadFoto(fotosFinal[i]);
+          fotosURLs[i] = url;
         } else if (previewsFinal[i]) {
-          fotosBase64[i] = previewsFinal[i];
+          fotosURLs[i] = previewsFinal[i];
         }
       }
 
+      // Atualizar OS
       await updateDoc(refDoc, {
         statusOS: form.status,
         servico: form.servico,
         descricaoTecnica: form.descricaoTecnica,
         tecnicoResponsavel: form.tecnicoResponsavel,
+        fotosFinal: fotosURLs,
         dataFechamento:
           form.status === "Fechado" ? serverTimestamp() : null,
-        fotosFinal: fotosBase64,
       });
 
       alert("✅ O.S atualizada com sucesso!");
-      await fetchData();
+      fetchData();
 
       setForm({
         osId: "",
@@ -154,15 +176,22 @@ export default function AcompanhamentoOS() {
         descricaoTecnica: "",
         tecnicoResponsavel: "",
       });
+
       setSelected(null);
       setFotosFinal([null, null, null]);
       setPreviewsFinal([null, null, null]);
+
     } catch (err) {
-      alert("❌ Erro ao atualizar: " + err.message);
-    } finally {
-      setLoading(false);
+      console.error(err);
+      alert("❌ Erro: " + err.message);
     }
+
+    setLoading(false);
   };
+
+  // =====================================================================
+  // ============================= RENDER ================================
+  // =====================================================================
 
   return (
     <div className="os-wrapper">
@@ -170,6 +199,7 @@ export default function AcompanhamentoOS() {
       <div className="form-header">
         <h1>Acompanhamento de Ordens de Serviço</h1>
       </div>
+
       <form className="os-form" onSubmit={handleSubmit}>
         <label>
           Número da O.S
@@ -179,13 +209,12 @@ export default function AcompanhamentoOS() {
             required
           >
             <option value="">Selecione...</option>
+
             {ordens.map((r, idx) => (
               <option key={r.id} value={r.id}>
                 {`OS-${String(idx + 1).padStart(2, "0")}`} -{" "}
                 {r.dataAbertura?.toDate
-                  ? r.dataAbertura
-                    .toDate()
-                    .toLocaleDateString("pt-BR")
+                  ? r.dataAbertura.toDate().toLocaleDateString("pt-BR")
                   : ""}
               </option>
             ))}
@@ -212,8 +241,8 @@ export default function AcompanhamentoOS() {
                   value={
                     selected.dataAbertura?.toDate
                       ? selected.dataAbertura
-                        .toDate()
-                        .toLocaleDateString("pt-BR")
+                          .toDate()
+                          .toLocaleDateString("pt-BR")
                       : ""
                   }
                   readOnly
@@ -230,7 +259,7 @@ export default function AcompanhamentoOS() {
               <textarea value={selected.descricao || ""} readOnly />
             </label>
 
-            {/* 🔹 Fotos com Lightbox */}
+            {/* FOTOS DA ABERTURA */}
             {selected?.fotos?.length > 0 && (
               <div className="upload-section">
                 <p>Fotos enviadas na abertura:</p>
@@ -243,13 +272,8 @@ export default function AcompanhamentoOS() {
                         setLightboxImage(url);
                         setLightboxOpen(true);
                       }}
-                      style={{ cursor: "pointer" }}
                     >
-                      <img
-                        src={url}
-                        alt={`foto abertura ${i + 1}`}
-                        className="preview-img"
-                      />
+                      <img src={url} alt="" className="preview-img" />
                     </div>
                   ))}
                 </div>
@@ -291,7 +315,7 @@ export default function AcompanhamentoOS() {
                 value={form.descricaoTecnica}
                 onChange={handleChange}
                 placeholder="Detalhe o que foi feito..."
-              />
+              ></textarea>
             </label>
 
             <label>
@@ -307,6 +331,7 @@ export default function AcompanhamentoOS() {
               </select>
             </label>
 
+            {/* FOTOS FINAIS */}
             <div className="upload-section">
               <p>Fotos da finalização (máx 3)</p>
               <div className="upload-cards">
@@ -315,12 +340,13 @@ export default function AcompanhamentoOS() {
                     {preview ? (
                       <img
                         src={preview}
-                        alt={`Preview final ${index + 1}`}
+                        alt=""
                         className="preview-img"
                       />
                     ) : (
                       <span>+</span>
                     )}
+
                     <input
                       type="file"
                       accept="image/*"
@@ -334,18 +360,14 @@ export default function AcompanhamentoOS() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-            >
+            <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? "Salvando..." : "Salvar"}
             </button>
           </>
         )}
       </form>
 
-      {/* Lightbox apenas para fotos de abertura */}
+      {/* Lightbox */}
       {lightboxOpen && (
         <div
           className="lightbox-overlay"
@@ -355,7 +377,7 @@ export default function AcompanhamentoOS() {
             className="lightbox-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <img src={lightboxImage} alt="Foto ampliada" />
+            <img src={lightboxImage} alt="" />
             <button
               className="btn-close"
               onClick={() => setLightboxOpen(false)}
