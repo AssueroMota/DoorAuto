@@ -111,7 +111,7 @@ function Tecnico() {
   return (
     <div className="form-wrapper">
       <div className="form-card">
-          <Link to="/tecnico-home" className="back-arrow" aria-label="Voltar"></Link>
+        <Link to="/tecnico-home" className="back-arrow" aria-label="Voltar"></Link>
         <div className="form-header">
           <h1 className="form-title">Formulário do Técnico</h1>
         </div>
@@ -128,6 +128,9 @@ function Tecnico() {
             >
               <option value="">Selecione...</option>
               <option value="Victor Oliveira">Victor Oliveira</option>
+              <option value="Thiago Luiz">Thiago Luiz</option>
+              <option value="Júlio Gomes">Júlio Gomes</option>
+              <option value="Raimundo Oliveira">Raimundo Oliveira</option>
             </select>
           </label>
 

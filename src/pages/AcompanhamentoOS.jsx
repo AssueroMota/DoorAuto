@@ -241,8 +241,8 @@ export default function AcompanhamentoOS() {
                   value={
                     selected.dataAbertura?.toDate
                       ? selected.dataAbertura
-                          .toDate()
-                          .toLocaleDateString("pt-BR")
+                        .toDate()
+                        .toLocaleDateString("pt-BR")
                       : ""
                   }
                   readOnly
@@ -328,8 +328,12 @@ export default function AcompanhamentoOS() {
               >
                 <option value="">Selecione...</option>
                 <option value="Victor Oliveira">Victor Oliveira</option>
+                <option value="Thiago Luiz">Thiago Luiz</option>
+                <option value="Júlio Gomes">Júlio Gomes</option>
+                <option value="Raimundo Oliveira">Raimundo Oliveira</option>
               </select>
             </label>
+
 
             {/* FOTOS FINAIS */}
             <div className="upload-section">
